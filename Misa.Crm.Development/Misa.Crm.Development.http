@@ -1,0 +1,6 @@
+@Misa.Crm.Development_HostAddress = http://localhost:5246
+
+GET {{Misa.Crm.Development_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
