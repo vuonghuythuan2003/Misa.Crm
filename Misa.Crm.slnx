@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="Misa.Crm.Development/Misa.Crm.Development.csproj" />
+  <Project Path="MISA.Core/MISA.Core.csproj" />
+  <Project Path="Misa.Crm.Development/Misa.Crm.Development.csproj" DisplayName="MISA.Crm.Development" />
+  <Project Path="MISA.Infrastructure/MISA.Infrastructure.csproj" />
 </Solution>
