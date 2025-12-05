@@ -129,6 +129,30 @@ namespace MISA.Infrastructure.Repositories
         }
 
         /// <summary>
+        /// Xóa mềm hàng loạt entities (đánh dấu is_deleted = 1 cho nhiều bản ghi)
+        /// </summary>
+        /// <param name="entityIds">Danh sách ID của entities cần xóa</param>
+        /// <returns>Số bản ghi bị ảnh hưởng</returns>
+        public int SoftDeleteMany(List<Guid> entityIds)
+        {
+            if (entityIds == null || entityIds.Count == 0)
+                return 0;
+
+            string tableName = ToSnakeCase(typeof(T).Name);
+            string idColumnName = ToSnakeCase(typeof(T).Name + "Id");
+            string placeholders = string.Join(",", entityIds.Select((_, i) => $"@Id{i}"));
+            string sqlCommand = $"UPDATE {tableName} SET is_deleted = 1 WHERE {idColumnName} IN ({placeholders})";
+            
+            var parameters = new DynamicParameters();
+            for (int i = 0; i < entityIds.Count; i++)
+            {
+                parameters.Add($"@Id{i}", entityIds[i]);
+            }
+
+            return dbConnection.Execute(sqlCommand, parameters);
+        }
+
+        /// <summary>
         /// Cập nhật entity trong database
         /// </summary>
         /// <param name="entity">Entity cần cập nhật</param>

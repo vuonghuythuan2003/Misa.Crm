@@ -75,57 +75,27 @@ namespace MISA.Crm.Development.Middleware
         {
             context.Response.ContentType = "application/json";
 
-            object response;
+            ApiResponse<object?> response;
             int statusCode = StatusCodes.Status500InternalServerError;
 
-            // Xử lý BaseException (custom exception)
+            // Xử lý BaseException (bao gồm ValidationException, NotFoundException, ...)
             if (exception is BaseException baseException)
             {
-                response = new
-                {
-                    data = (object?)null,
-                    meta = (object?)null,
-                    error = new
-                    {
-                        code = baseException.ErrorCode,
-                        message = baseException.ErrorMessage,
-                        details = baseException.ErrorDetails
-                    }
-                };
+                response = ApiResponse<object?>.Fail(
+                    baseException.ErrorCode, 
+                    baseException.ErrorMessage, 
+                    baseException.ErrorDetails);
 
                 // Xác định HTTP status code từ error code
                 statusCode = GetStatusCode(baseException.ErrorCode);
             }
-            // Xử lý validation error
-            else if (exception is ArgumentNullException || exception is ArgumentException)
-            {
-                response = new
-                {
-                    data = (object?)null,
-                    meta = (object?)null,
-                    error = new
-                    {
-                        code = ErrorCode.ValidationError,
-                        message = exception.Message,
-                        details = (object?)null
-                    }
-                };
-                statusCode = StatusCodes.Status400BadRequest;
-            }
-            // Xử lý các exception khác
+            // Xử lý các exception khác (server error)
             else
             {
-                response = new
-                {
-                    data = (object?)null,
-                    meta = (object?)null,
-                    error = new
-                    {
-                        code = ErrorCode.InternalServerError,
-                        message = "Lỗi server nội bộ. Vui lòng thử lại sau.",
-                        details = (object?)null
-                    }
-                };
+                response = ApiResponse<object?>.Fail(
+                    ErrorCode.InternalServerError,
+                    "Lỗi server nội bộ. Vui lòng thử lại sau.",
+                    null);
                 statusCode = StatusCodes.Status500InternalServerError;
             }
 

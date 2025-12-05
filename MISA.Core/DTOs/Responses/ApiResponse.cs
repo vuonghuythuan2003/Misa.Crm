@@ -14,17 +14,17 @@ namespace MISA.Core.DTOs.Responses
     public class ApiResponse<T>
     {
         /// <summary>
-        /// Dữ liệu trả về
+        /// Chứa dữ liệu thực tế mà người dùng muốn lấy
         /// </summary>
         public T? Data { get; set; }
 
         /// <summary>
-        /// Thông tin meta (phân trang, ...)
+        /// Chứa thông tin phụ, thường dùng cho phân trang (trang số mấy, có bao nhiêu trang
         /// </summary>
         public MetaData? Meta { get; set; }
 
         /// <summary>
-        /// Thông tin lỗi (null nếu thành công)
+        /// Nếu API bị lỗi, thông tin lỗi sẽ nằm ở đây. Nếu thành công, cái này là null.
         /// </summary>
         public ErrorData? Error { get; set; }
 

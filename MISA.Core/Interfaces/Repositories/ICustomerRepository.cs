@@ -38,39 +38,6 @@ namespace MISA.Core.Interfaces.Repositories
 
         #endregion
 
-        #region Phân trang
-
-        /// <summary>
-        /// Lấy danh sách khách hàng có phân trang
-        /// </summary>
-        /// <param name="pagingRequest">Thông tin phân trang</param>
-        /// <returns>Tuple chứa danh sách và tổng số bản ghi</returns>
-        (List<Customer> Data, int TotalRecords) GetPaging(CustomerPagingRequest pagingRequest);
-
-        #endregion
-
-        #region Sắp xếp
-
-        /// <summary>
-        /// Lấy danh sách khách hàng có sắp xếp
-        /// </summary>
-        /// <param name="sortRequest">Thông tin sắp xếp</param>
-        /// <returns>Danh sách khách hàng đã sắp xếp</returns>
-        List<Customer> GetSorted(CustomerSortRequest sortRequest);
-
-        #endregion
-
-        #region Lọc nhanh
-
-        /// <summary>
-        /// Lọc nhanh khách hàng theo tên, email, số điện thoại
-        /// </summary>
-        /// <param name="filterRequest">Thông tin lọc</param>
-        /// <returns>Danh sách khách hàng đã lọc</returns>
-        List<Customer> QuickFilter(CustomerQuickFilterRequest filterRequest);
-
-        #endregion
-
         #region Xuất CSV
 
         /// <summary>
@@ -78,7 +45,7 @@ namespace MISA.Core.Interfaces.Repositories
         /// </summary>
         /// <param name="exportRequest">Thông tin lọc và sắp xếp</param>
         /// <returns>Danh sách khách hàng</returns>
-        List<Customer> GetForExport(CustomerExportRequest exportRequest);
+        List<Customer> GetForExport(PagingRequest exportRequest);
 
         #endregion
 

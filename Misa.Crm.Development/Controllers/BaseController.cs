@@ -10,19 +10,18 @@ namespace MISA.Crm.Development.Controllers
     /// <summary>
     /// Base Controller cho các API CRUD
     /// </summary>
-    /// <typeparam name="TCreateRequest">Kiểu DTO cho tạo mới</typeparam>
-    /// <typeparam name="TUpdateRequest">Kiểu DTO cho cập nhật</typeparam>
+    /// <typeparam name="TRequest">Kiểu DTO cho tạo mới và cập nhật</typeparam>
     /// <typeparam name="TResponse">Kiểu DTO trả về</typeparam>
     /// Created by: vuonghuythuan2003 - 03/12/2024
     [ApiController]
-    public class BaseController<TCreateRequest, TUpdateRequest, TResponse> : ControllerBase
+    public class BaseController<TRequest, TResponse> : ControllerBase
     {
         #region Declaration
 
         /// <summary>
         /// Service xử lý nghiệp vụ
         /// </summary>
-        protected readonly IBaseService<TCreateRequest, TUpdateRequest, TResponse> _baseService;
+        protected readonly IBaseService<TRequest, TResponse> _baseService;
 
         #endregion
 
@@ -32,7 +31,7 @@ namespace MISA.Crm.Development.Controllers
         /// Khởi tạo BaseController với service
         /// </summary>
         /// <param name="baseService">Service tương ứng</param>
-        public BaseController(IBaseService<TCreateRequest, TUpdateRequest, TResponse> baseService)
+        public BaseController(IBaseService<TRequest, TResponse> baseService)
         {
             _baseService = baseService;
         }
@@ -86,7 +85,7 @@ namespace MISA.Crm.Development.Controllers
         /// <param name="request">DTO chứa thông tin cần thêm</param>
         /// <returns>Response DTO của bản ghi đã thêm</returns>
         [HttpPost]
-        public virtual IActionResult Insert([FromBody] TCreateRequest request)
+        public virtual IActionResult Insert([FromBody] TRequest request)
         {
             TResponse result = _baseService.Insert(request);
             return StatusCode(201, ApiResponse<TResponse>.Success(result));
@@ -95,12 +94,13 @@ namespace MISA.Crm.Development.Controllers
         /// <summary>
         /// Cập nhật bản ghi
         /// </summary>
+        /// <param name="id">ID của entity cần cập nhật</param>
         /// <param name="request">DTO chứa thông tin cần cập nhật</param>
         /// <returns>Response DTO của bản ghi đã cập nhật</returns>
-        [HttpPut]
-        public virtual IActionResult Update([FromBody] TUpdateRequest request)
+        [HttpPut("{id}")]
+        public virtual IActionResult Update(Guid id, [FromBody] TRequest request)
         {
-            TResponse result = _baseService.Update(request);
+            TResponse result = _baseService.Update(id, request);
             return Ok(ApiResponse<TResponse>.Success(result));
         }
 

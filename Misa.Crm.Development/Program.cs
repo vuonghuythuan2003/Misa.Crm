@@ -10,7 +10,12 @@ var builder = WebApplication.CreateBuilder(args);
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Cấu hình JSON serialization dùng camelCase
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -18,6 +23,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 // Services
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 var app = builder.Build();
 
 // Sử dụng Exception Middleware (đặt đầu tiên để bắt tất cả exception)

@@ -50,6 +50,13 @@ namespace MISA.Core.Interfaces.Repositories
         int SoftDelete(Guid entityId);
 
         /// <summary>
+        /// Xóa mềm hàng loạt entities (đánh dấu IsDeleted = true cho nhiều bản ghi)
+        /// </summary>
+        /// <param name="entityIds">Danh sách ID của entities cần xóa</param>
+        /// <returns>Số bản ghi bị ảnh hưởng</returns>
+        int SoftDeleteMany(List<Guid> entityIds);
+
+        /// <summary>
         /// Lấy danh sách bản ghi với phân trang và sắp xếp
         /// </summary>
         /// <param name="pagingRequest">Thông tin phân trang và sắp xếp</param>

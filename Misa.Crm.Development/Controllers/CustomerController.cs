@@ -4,7 +4,6 @@ using MISA.Core.DTOs.Requests;
 using MISA.Core.DTOs.Responses;
 using MISA.Core.Exception;
 using MISA.Core.Interfaces.Services;
-using System.IO;
 
 namespace MISA.Crm.Development.Controllers
 {
@@ -14,7 +13,7 @@ namespace MISA.Crm.Development.Controllers
     /// Created by: vuonghuythuan2003 - 03/12/2024
     [Route("api/v1/[controller]")]
     [ApiController]
-    public class CustomerController : BaseController<CustomerCreateRequest, CustomerUpdateRequest, CustomerResponse>
+    public class CustomerController : BaseController<CustomerRequest, CustomerResponse>
     {
         #region Declaration
 
@@ -22,6 +21,11 @@ namespace MISA.Crm.Development.Controllers
         /// Customer Service
         /// </summary>
         private readonly ICustomerService _customerService;
+
+        /// <summary>
+        /// Cloudinary Service
+        /// </summary>
+        private readonly ICloudinaryService _cloudinaryService;
 
         #endregion
 
@@ -31,9 +35,11 @@ namespace MISA.Crm.Development.Controllers
         /// Khởi tạo CustomerController
         /// </summary>
         /// <param name="customerService">Customer Service</param>
-        public CustomerController(ICustomerService customerService) : base(customerService)
+        /// <param name="cloudinaryService">Cloudinary Service</param>
+        public CustomerController(ICustomerService customerService, ICloudinaryService cloudinaryService) : base(customerService)
         {
             _customerService = customerService;
+            _cloudinaryService = cloudinaryService;
         }
 
         #endregion
@@ -62,7 +68,7 @@ namespace MISA.Crm.Development.Controllers
         /// <param name="pagingRequest">Thông tin phân trang (PageNumber, PageSize)</param>
         /// <returns>Danh sách khách hàng với thông tin phân trang</returns>
         [HttpGet("customer-paging")]
-        public IActionResult GetCustomerPaging([FromQuery] CustomerPagingRequest pagingRequest)
+        public IActionResult GetCustomerPaging([FromQuery] PagingRequest pagingRequest)
         {
             PagingResponse<CustomerResponse> result = _customerService.GetPaging(pagingRequest);
             return Ok(ApiResponse<List<CustomerResponse>>.Success(
@@ -74,65 +80,35 @@ namespace MISA.Crm.Development.Controllers
 
         #endregion
 
-        #region Sắp xếp
-
-        /// <summary>
-        /// Lấy danh sách khách hàng có sắp xếp theo cột
-        /// </summary>
-        /// <param name="sortRequest">Thông tin sắp xếp (SortColumn, SortDirection)</param>
-        /// <returns>Danh sách khách hàng đã sắp xếp</returns>
-        [HttpGet("sort")]
-        public IActionResult GetSorted([FromQuery] CustomerSortRequest sortRequest)
-        {
-            List<CustomerResponse> result = _customerService.GetSorted(sortRequest);
-            return Ok(ApiResponse<List<CustomerResponse>>.Success(result));
-        }
-
-        #endregion
-
-        #region Lọc nhanh
-
-        /// <summary>
-        /// Lọc nhanh khách hàng theo tên, email, số điện thoại
-        /// </summary>
-        /// <param name="filterRequest">Thông tin lọc nhanh (CustomerName, CustomerEmail, CustomerPhoneNumber, Keyword)</param>
-        /// <returns>Danh sách khách hàng thỏa điều kiện lọc</returns>
-        [HttpGet("quick-filter")]
-        public IActionResult QuickFilter([FromQuery] CustomerQuickFilterRequest filterRequest)
-        {
-            List<CustomerResponse> result = _customerService.QuickFilter(filterRequest);
-            return Ok(ApiResponse<List<CustomerResponse>>.Success(result));
-        }
-
-        #endregion
-
         #region Nhập CSV
 
         /// <summary>
         /// Nhập khách hàng từ file CSV
+        /// Các cột bắt buộc: FullName/CustomerName, Phone/CustomerPhoneNumber, Email/CustomerEmail, Address/CustomerAddress, CustomerType
+        /// Tự động sinh mã khách hàng (KH + yyyyMM + 6 chữ số), validate dữ liệu, kiểm tra trùng lặp
         /// </summary>
-        /// <param name="file">File CSV chứa dữ liệu khách hàng</param>
-        /// <returns>Kết quả nhập dữ liệu</returns>
+        /// <param name="file">File CSV chứa dữ liệu khách hàng (tối đa 5MB)</param>
+        /// <returns>Kết quả nhập dữ liệu (số thành công, tổng lỗi, danh sách chi tiết lỗi theo dòng)</returns>
         [HttpPost("import")]
         public IActionResult ImportFromCsv(IFormFile file)
         {
             // Kiểm tra file
             if (file == null || file.Length == 0)
             {
-                throw new ValidationException("file", "Vui lòng chọn file để tải lên.");
+                throw new ValidationException("file", "Vui lòng chọn file để tải lên.", true);
             }
 
             // Kiểm tra định dạng file
             string fileExtension = Path.GetExtension(file.FileName).ToLower();
             if (fileExtension != ".csv")
             {
-                throw new BusinessException(ErrorCode.UnsupportedFileFormat, "Chỉ hỗ trợ file định dạng CSV.");
+                throw new ValidationException(ErrorCode.UnsupportedFileFormat, "Chỉ hỗ trợ file định dạng CSV.", null);
             }
 
             // Kiểm tra kích thước file (giới hạn 5MB)
             if (file.Length > 5 * 1024 * 1024)
             {
-                throw new BusinessException(ErrorCode.FileSizeExceeded, "Kích thước file không được vượt quá 5MB.");
+                throw new ValidationException(ErrorCode.FileSizeExceeded, "Kích thước file không được vượt quá 5MB.", null);
             }
 
             // Đọc và xử lý file
@@ -153,11 +129,96 @@ namespace MISA.Crm.Development.Controllers
         /// <param name="exportRequest">Thông tin lọc và sắp xếp</param>
         /// <returns>File CSV</returns>
         [HttpGet("export")]
-        public IActionResult ExportToCsv([FromQuery] CustomerExportRequest exportRequest)
+        public IActionResult ExportToCsv([FromQuery] PagingRequest exportRequest)
         {
             byte[] csvBytes = _customerService.ExportToCsv(exportRequest);
             string fileName = $"DanhSachKhachHang_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
             return File(csvBytes, "text/csv; charset=utf-8", fileName);
+        }
+
+        #endregion
+
+        #region Tạo và cập nhật khách hàng
+
+        /// <summary>
+        /// Tạo mới khách hàng với upload ảnh đại diện
+        /// </summary>
+        /// <param name="file">File ảnh (optional)</param>
+        /// <param name="request">Dữ liệu khách hàng (form-data)</param>
+        /// <returns>Khách hàng vừa tạo</returns>
+        [HttpPost("with-avatar")]
+        public IActionResult CreateWithAvatar(IFormFile? file, [FromForm] CustomerRequest request)
+        {
+            // Nếu có file ảnh, upload lên Cloudinary
+            if (file != null && file.Length > 0)
+            {
+                try
+                {
+                    string avatarUrl = _cloudinaryService.UploadImageAsync(file).GetAwaiter().GetResult();
+                    // Lưu URL ảnh vào request
+                    request.CustomerAvatarUrl = avatarUrl;
+                }
+                catch (System.Exception ex)
+                {
+                    throw new ValidationException("file", $"Lỗi upload ảnh: {ex.Message}", true);
+                }
+            }
+
+            // Gọi service tạo mới khách hàng
+            CustomerResponse result = _customerService.Insert(request);
+            return StatusCode(201, ApiResponse<CustomerResponse>.Success(result));
+        }
+
+        /// <summary>
+        /// Cập nhật khách hàng với upload ảnh đại diện mới
+        /// </summary>
+        /// <param name="id">ID khách hàng</param>
+        /// <param name="file">File ảnh (optional)</param>
+        /// <param name="request">Dữ liệu cập nhật (form-data)</param>
+        /// <returns>Khách hàng đã cập nhật</returns>
+        [HttpPut("{id}/with-avatar")]
+        public IActionResult UpdateWithAvatar(Guid id, IFormFile? file, [FromForm] CustomerRequest request)
+        {
+            // Nếu có file ảnh mới, upload lên Cloudinary
+            if (file != null && file.Length > 0)
+            {
+                try
+                {
+                    string avatarUrl = _cloudinaryService.UploadImageAsync(file).GetAwaiter().GetResult();
+                    // Lưu URL ảnh vào request
+                    request.CustomerAvatarUrl = avatarUrl;
+                }
+                catch (System.Exception ex)
+                {
+                    throw new ValidationException("file", $"Lỗi upload ảnh: {ex.Message}", true);
+                }
+            }
+
+            // Gọi service cập nhật khách hàng
+            CustomerResponse result = _customerService.Update(id, request);
+            return Ok(ApiResponse<CustomerResponse>.Success(result));
+        }
+
+        #endregion
+
+        #region Xóa hàng loạt
+
+        /// <summary>
+        /// Xóa mềm hàng loạt khách hàng
+        /// </summary>
+        /// <param name="ids">Danh sách ID khách hàng cần xóa</param>
+        /// <returns>Số bản ghi bị ảnh hưởng</returns>
+        [HttpPost("delete-many")]
+        public IActionResult DeleteMany([FromBody] List<Guid> ids)
+        {
+            // Kiểm tra danh sách IDs
+            if (ids == null || ids.Count == 0)
+            {
+                throw new ValidationException("ids", "Vui lòng chọn ít nhất một khách hàng để xóa.", true);
+            }
+
+            int affectedRows = _customerService.DeleteMany(ids);
+            return Ok(ApiResponse<object>.Success(new { deletedCount = affectedRows }));
         }
 
         #endregion

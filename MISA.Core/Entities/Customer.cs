@@ -75,6 +75,11 @@ namespace MISA.Core.Entities
         public string PurchasedItemName { get; set; }
 
         /// <summary>
+        /// Đường dẫn ảnh đại diện
+        /// </summary>
+        public string CustomerAvatarUrl { get; set; }
+
+        /// <summary>
         /// Trạng thái xóa
         /// </summary>
         public bool IsDeleted { get; set; }

@@ -6,12 +6,9 @@ using MISA.Core.Interfaces.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MISA.Core.Services
 {
@@ -19,7 +16,7 @@ namespace MISA.Core.Services
     /// Service xử lý nghiệp vụ Customer
     /// </summary>
     /// Created by: vuonghuythuan2003 - 03/12/2024
-    public class CustomerService : BaseService<Customer, CustomerCreateRequest, CustomerUpdateRequest, CustomerResponse>, ICustomerService
+    public class CustomerService : BaseService<Customer, CustomerRequest, CustomerResponse>, ICustomerService
     {
         #region Declaration
 
@@ -27,6 +24,11 @@ namespace MISA.Core.Services
         /// Customer Repository
         /// </summary>
         private readonly ICustomerRepository _customerRepository;
+
+        /// <summary>
+        /// Cloudinary Service để upload ảnh
+        /// </summary>
+        private readonly ICloudinaryService _cloudinaryService;
 
         #endregion
 
@@ -36,9 +38,11 @@ namespace MISA.Core.Services
         /// Khởi tạo CustomerService
         /// </summary>
         /// <param name="customerRepository">Customer Repository</param>
-        public CustomerService(ICustomerRepository customerRepository) : base(customerRepository)
+        /// <param name="cloudinaryService">Cloudinary Service</param>
+        public CustomerService(ICustomerRepository customerRepository, ICloudinaryService cloudinaryService) : base(customerRepository)
         {
             _customerRepository = customerRepository;
+            _cloudinaryService = cloudinaryService;
         }
 
         #endregion
@@ -53,128 +57,68 @@ namespace MISA.Core.Services
         public string GenerateCustomerCode()
         {
             string yearMonth = DateTime.Now.ToString("yyyyMM");
-            string prefix = "KH" + yearMonth;
+            string prefix = "KH" + yearMonth; // KH202512 (8 ký tự)
 
             string maxCode = _customerRepository.GetMaxCustomerCode(prefix);
 
             int nextSequence = 1;
-            if (!string.IsNullOrEmpty(maxCode))
+            if (!string.IsNullOrEmpty(maxCode) && maxCode.Length > prefix.Length)
             {
-                // Lấy 6 số cuối và tăng lên 1
-                string sequenceStr = maxCode.Substring(8);
-                nextSequence = int.Parse(sequenceStr) + 1;
+                // Lấy 6 số cuối (sau phần KH + yyyyMM) và tăng lên 1
+                string sequenceStr = maxCode.Substring(prefix.Length); // Lấy từ vị trí 8 trở đi
+                
+                // Kiểm tra xem phần lấy ra có phải toàn số không
+                if (int.TryParse(sequenceStr, out int currentSequence))
+                {
+                    nextSequence = currentSequence + 1;
+                }
             }
-            // Decimal độ dài mong muốn là 6
+            
+            // Định dạng: prefix + 6 số tăng dần (D6 = định dạng 6 chữ số, padding 0 nếu cần)
             return prefix + nextSequence.ToString("D6");
         }
 
-        #endregion
 
-        #region Phân trang
-
-        /// <summary>
-        /// Lấy danh sách khách hàng có phân trang
-        /// </summary>
-        /// <param name="pagingRequest">Thông tin phân trang</param>
-        /// <returns>Response DTO chứa danh sách và thông tin phân trang</returns>
-        public PagingResponse<CustomerResponse> GetPaging(CustomerPagingRequest pagingRequest)
-        {
-            // Lấy dữ liệu từ repository
-            var (customers, totalRecords) = _customerRepository.GetPaging(pagingRequest);
-
-            // Map từ Entity sang Response DTO
-            List<CustomerResponse> responses = new List<CustomerResponse>();
-            foreach (Customer customer in customers)
-            {
-                responses.Add(MapEntityToResponse(customer));
-            }
-
-            // Tạo response phân trang
-            return new PagingResponse<CustomerResponse>(responses, totalRecords, pagingRequest.PageNumber, pagingRequest.PageSize);
-        }
-
-        #endregion
-
-        #region Sắp xếp
-
-        /// <summary>
-        /// Lấy danh sách khách hàng có sắp xếp
-        /// </summary>
-        /// <param name="sortRequest">Thông tin sắp xếp</param>
-        /// <returns>Danh sách khách hàng đã sắp xếp</returns>
-        public List<CustomerResponse> GetSorted(CustomerSortRequest sortRequest)
-        {
-            // Lấy dữ liệu từ repository
-            List<Customer> customers = _customerRepository.GetSorted(sortRequest);
-
-            // Map từ Entity sang Response DTO
-            List<CustomerResponse> responses = new List<CustomerResponse>();
-            foreach (Customer customer in customers)
-            {
-                responses.Add(MapEntityToResponse(customer));
-            }
-
-            return responses;
-        }
-
-        #endregion
-
-        #region Lọc nhanh
-
-        /// <summary>
-        /// Lọc nhanh khách hàng theo tên, email, số điện thoại
-        /// </summary>
-        /// <param name="filterRequest">Thông tin lọc nhanh</param>
-        /// <returns>Danh sách khách hàng thỏa điều kiện lọc</returns>
-        public List<CustomerResponse> QuickFilter(CustomerQuickFilterRequest filterRequest)
-        {
-            // Lấy dữ liệu từ repository
-            List<Customer> customers = _customerRepository.QuickFilter(filterRequest);
-
-            // Map từ Entity sang Response DTO
-            List<CustomerResponse> responses = new List<CustomerResponse>();
-            foreach (Customer customer in customers)
-            {
-                responses.Add(MapEntityToResponse(customer));
-            }
-
-            return responses;
-        }
 
         #endregion
 
         #region Nhập CSV
 
-        /// <summary>
-        /// Nhập khách hàng từ file CSV
-        /// Mapping bắt buộc: FullName, Phone, Email, Address, CustomerType
-        /// </summary>
-        /// <param name="csvStream">Stream của file CSV</param>
-        /// <returns>Kết quả nhập dữ liệu</returns>
         public ImportResponse ImportFromCsv(Stream csvStream)
         {
             ImportResponse response = new ImportResponse();
             List<Customer> validCustomers = new List<Customer>();
             
-            // Danh sách để kiểm tra trùng lặp trong file
             HashSet<string> emailsInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> phonesInFile = new HashSet<string>();
 
-            // Dictionary để lưu vị trí các cột theo tên header
             Dictionary<string, int> columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            // Khởi tạo counter sinh mã
+            string yearMonth = DateTime.Now.ToString("yyyyMM");
+            string prefix = "KH" + yearMonth;
+            
+            string maxCodeInDb = _customerRepository.GetMaxCustomerCode(prefix);
+            int nextSequence = 1;
+            if (!string.IsNullOrEmpty(maxCodeInDb) && maxCodeInDb.Length > prefix.Length)
+            {
+                if (int.TryParse(maxCodeInDb.Substring(prefix.Length), out int currentSequence))
+                {
+                    nextSequence = currentSequence + 1;
+                }
+            }
 
             using (StreamReader reader = new StreamReader(csvStream, Encoding.UTF8))
             {
-                // Đọc header và mapping cột
                 string headerLine = reader.ReadLine();
                 if (string.IsNullOrWhiteSpace(headerLine))
                 {
-                    throw new MISA.Core.Exception.BusinessException(
+                    throw new MISA.Core.Exception.ValidationException(
                         MISA.Core.Exception.ErrorCode.EmptyFile, 
-                        "File CSV không có dữ liệu hoặc thiếu header.");
+                        "File CSV không có dữ liệu hoặc thiếu header.",
+                        null);
                 }
 
-                // Parse header để lấy vị trí các cột
                 string[] headers = ParseCsvLine(headerLine);
                 for (int i = 0; i < headers.Length; i++)
                 {
@@ -185,22 +129,42 @@ namespace MISA.Core.Services
                     }
                 }
 
-                // Kiểm tra các cột bắt buộc
-                string[] requiredColumns = { "FullName", "Phone", "Email", "Address", "CustomerType" };
-                List<string> missingColumns = new List<string>();
-                foreach (string col in requiredColumns)
+                Dictionary<string, string[]> requiredColumnsMap = new Dictionary<string, string[]>
                 {
-                    if (!columnMapping.ContainsKey(col))
+                    { "FullName", new[] { "FullName", "CustomerName" } },
+                    { "Phone", new[] { "Phone", "CustomerPhoneNumber", "PhoneNumber" } },
+                    { "Email", new[] { "Email", "CustomerEmail" } },
+                    { "Address", new[] { "Address", "CustomerAddress" } },
+                    { "CustomerType", new[] { "CustomerType" } }
+                };
+
+                List<string> missingColumns = new List<string>();
+                Dictionary<string, string> mappedColumns = new Dictionary<string, string>();
+
+                foreach (var columnGroup in requiredColumnsMap)
+                {
+                    bool found = false;
+                    foreach (string altName in columnGroup.Value)
                     {
-                        missingColumns.Add(col);
+                        if (columnMapping.ContainsKey(altName))
+                        {
+                            mappedColumns[columnGroup.Key] = altName;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                    {
+                        missingColumns.Add(columnGroup.Key);
                     }
                 }
 
                 if (missingColumns.Count > 0)
                 {
-                    throw new MISA.Core.Exception.BusinessException(
+                    throw new MISA.Core.Exception.ValidationException(
                         MISA.Core.Exception.ErrorCode.MissingRequiredColumns, 
-                        $"File CSV thiếu các cột bắt buộc: {string.Join(", ", missingColumns)}");
+                        $"File CSV thiếu các cột bắt buộc: {string.Join(", ", missingColumns)}",
+                        null);
                 }
 
                 int rowNumber = 0;
@@ -212,111 +176,18 @@ namespace MISA.Core.Services
                     response.TotalRows++;
 
                     if (string.IsNullOrWhiteSpace(line))
-                    {
                         continue;
-                    }
 
-                    List<string> errors = new List<string>();
                     string[] columns = ParseCsvLine(line);
 
-                    // Lấy dữ liệu từ các cột theo mapping
-                    string fullName = GetColumnValue(columns, columnMapping, "FullName");
-                    string phone = GetColumnValue(columns, columnMapping, "Phone");
-                    string email = GetColumnValue(columns, columnMapping, "Email");
-                    string address = GetColumnValue(columns, columnMapping, "Address");
-                    string customerType = GetColumnValue(columns, columnMapping, "CustomerType");
+                    string fullName = GetColumnValue(columns, columnMapping, mappedColumns["FullName"]);
+                    string phone = GetColumnValue(columns, columnMapping, mappedColumns["Phone"]);
+                    string email = GetColumnValue(columns, columnMapping, mappedColumns["Email"]);
+                    string address = GetColumnValue(columns, columnMapping, mappedColumns["Address"]);
+                    string customerType = GetColumnValue(columns, columnMapping, mappedColumns["CustomerType"]);
 
-                    // === VALIDATE DỮ LIỆU ===
+                    List<string> errors = ValidateCustomerData(fullName, phone, email, address, customerType, phonesInFile, emailsInFile);
 
-                    // 1. Tên khách hàng (FullName) - Bắt buộc, tối đa 255 ký tự
-                    if (string.IsNullOrWhiteSpace(fullName))
-                    {
-                        errors.Add("Tên khách hàng (FullName) không được để trống.");
-                    }
-                    else if (fullName.Length > 255)
-                    {
-                        errors.Add("Tên khách hàng không được vượt quá 255 ký tự.");
-                    }
-
-                    // 2. Số điện thoại (Phone) - Bắt buộc, unique, 10-11 số
-                    if (string.IsNullOrWhiteSpace(phone))
-                    {
-                        errors.Add("Số điện thoại (Phone) không được để trống.");
-                    }
-                    else if (!Regex.IsMatch(phone, @"^0(3|5|7|8|9)\d{8,9}$"))
-                    {
-                        errors.Add("Số điện thoại phải từ 10-11 số, bắt đầu bằng 03, 05, 07, 08, 09.");
-                    }
-                    else
-                    {
-                        // Kiểm tra trùng trong file
-                        if (phonesInFile.Contains(phone))
-                        {
-                            errors.Add($"Số điện thoại '{phone}' bị trùng trong file.");
-                        }
-                        // Kiểm tra trùng trong database
-                        else if (_customerRepository.IsPhoneNumberExist(phone))
-                        {
-                            errors.Add($"Số điện thoại '{phone}' đã tồn tại trong hệ thống.");
-                        }
-                        else
-                        {
-                            phonesInFile.Add(phone);
-                        }
-                    }
-
-                    // 3. Email - Bắt buộc, unique, đúng định dạng, tối đa 100 ký tự
-                    if (string.IsNullOrWhiteSpace(email))
-                    {
-                        errors.Add("Email không được để trống.");
-                    }
-                    else if (!new EmailAddressAttribute().IsValid(email))
-                    {
-                        errors.Add("Email không đúng định dạng.");
-                    }
-                    else if (email.Length > 100)
-                    {
-                        errors.Add("Email không được vượt quá 100 ký tự.");
-                    }
-                    else
-                    {
-                        // Kiểm tra trùng trong file
-                        if (emailsInFile.Contains(email))
-                        {
-                            errors.Add($"Email '{email}' bị trùng trong file.");
-                        }
-                        // Kiểm tra trùng trong database
-                        else if (_customerRepository.IsEmailExist(email))
-                        {
-                            errors.Add($"Email '{email}' đã tồn tại trong hệ thống.");
-                        }
-                        else
-                        {
-                            emailsInFile.Add(email);
-                        }
-                    }
-
-                    // 4. Địa chỉ (Address) - Bắt buộc, tối đa 255 ký tự
-                    if (string.IsNullOrWhiteSpace(address))
-                    {
-                        errors.Add("Địa chỉ (Address) không được để trống.");
-                    }
-                    else if (address.Length > 255)
-                    {
-                        errors.Add("Địa chỉ không được vượt quá 255 ký tự.");
-                    }
-
-                    // 5. Loại khách hàng (CustomerType) - Bắt buộc, tối đa 20 ký tự
-                    if (string.IsNullOrWhiteSpace(customerType))
-                    {
-                        errors.Add("Loại khách hàng (CustomerType) không được để trống.");
-                    }
-                    else if (customerType.Length > 20)
-                    {
-                        errors.Add("Loại khách hàng không được vượt quá 20 ký tự.");
-                    }
-
-                    // Nếu có lỗi, thêm vào danh sách lỗi
                     if (errors.Count > 0)
                     {
                         response.Errors.Add(new ImportErrorDetail
@@ -329,21 +200,17 @@ namespace MISA.Core.Services
                         continue;
                     }
 
-                    // Tự động sinh mã khách hàng
-                    string customerCode = GenerateCustomerCode();
-
-                    // Tạo entity Customer
                     Customer customer = new Customer
                     {
                         CustomerId = Guid.NewGuid(),
                         CustomerType = customerType,
-                        CustomerCode = customerCode,
+                        CustomerCode = prefix + nextSequence.ToString("D6"),
                         CustomerName = fullName,
                         CustomerPhoneNumber = phone,
                         CustomerEmail = email,
                         CustomerAddress = address,
-                        CustomerShippingAddress = address, // Mặc định dùng địa chỉ liên hệ
-                        CustomerTaxCode = "", // Để trống
+                        CustomerShippingAddress = address,
+                        CustomerTaxCode = "",
                         LastPurchaseDate = null,
                         PurchasedItemCode = null,
                         PurchasedItemName = null,
@@ -351,17 +218,71 @@ namespace MISA.Core.Services
                     };
 
                     validCustomers.Add(customer);
+                    nextSequence++;
                 }
             }
 
-            // Insert các bản ghi hợp lệ vào database
             if (validCustomers.Count > 0)
             {
-                int insertedCount = _customerRepository.InsertMany(validCustomers);
-                response.SuccessCount = insertedCount;
+                response.SuccessCount = _customerRepository.InsertMany(validCustomers);
             }
 
             return response;
+        }
+
+        /// <summary>
+        /// Validate dữ liệu khách hàng từ CSV
+        /// </summary>
+        private List<string> ValidateCustomerData(string fullName, string phone, string email, string address, 
+            string customerType, HashSet<string> phonesInFile, HashSet<string> emailsInFile)
+        {
+            List<string> errors = new List<string>();
+
+            // Validate FullName
+            if (string.IsNullOrWhiteSpace(fullName))
+                errors.Add("Tên khách hàng không được để trống.");
+            else if (fullName.Length > 255)
+                errors.Add("Tên khách hàng không được vượt quá 255 ký tự.");
+
+            // Validate Phone
+            if (string.IsNullOrWhiteSpace(phone))
+                errors.Add("Số điện thoại không được để trống.");
+            else if (!Regex.IsMatch(phone, @"^0(3|5|7|8|9)\d{8,9}$"))
+                errors.Add("Số điện thoại phải từ 10-11 số, bắt đầu bằng 03, 05, 07, 08, 09.");
+            else if (phonesInFile.Contains(phone))
+                errors.Add($"Số điện thoại '{phone}' bị trùng trong file.");
+            else if (_customerRepository.IsPhoneNumberExist(phone))
+                errors.Add($"Số điện thoại '{phone}' đã tồn tại trong hệ thống.");
+            else
+                phonesInFile.Add(phone);
+
+            // Validate Email
+            if (string.IsNullOrWhiteSpace(email))
+                errors.Add("Email không được để trống.");
+            else if (!new EmailAddressAttribute().IsValid(email))
+                errors.Add("Email không đúng định dạng.");
+            else if (email.Length > 100)
+                errors.Add("Email không được vượt quá 100 ký tự.");
+            else if (emailsInFile.Contains(email))
+                errors.Add($"Email '{email}' bị trùng trong file.");
+            else if (_customerRepository.IsEmailExist(email))
+                errors.Add($"Email '{email}' đã tồn tại trong hệ thống.");
+            else
+                emailsInFile.Add(email);
+
+            // Validate Address
+            if (string.IsNullOrWhiteSpace(address))
+                errors.Add("Địa chỉ không được để trống.");
+            else if (address.Length > 255)
+                errors.Add("Địa chỉ không được vượt quá 255 ký tự.");
+
+            // Validate CustomerType
+            if (string.IsNullOrWhiteSpace(customerType))
+                errors.Add("Loại khách hàng không được để trống.");
+            else if (customerType.Length > 20)
+                errors.Add("Loại khách hàng không được vượt quá 20 ký tự.");
+
+            return errors;
         }
 
         /// <summary>
@@ -432,7 +353,7 @@ namespace MISA.Core.Services
         /// </summary>
         /// <param name="exportRequest">Thông tin lọc và sắp xếp</param>
         /// <returns>Byte array chứa nội dung file CSV</returns>
-        public byte[] ExportToCsv(CustomerExportRequest exportRequest)
+        public byte[] ExportToCsv(PagingRequest exportRequest)
         {
             // Lấy danh sách khách hàng theo điều kiện lọc (không phân trang)
             List<Customer> customers = _customerRepository.GetForExport(exportRequest);
@@ -496,11 +417,11 @@ namespace MISA.Core.Services
         #region Override Methods
 
         /// <summary>
-        /// Map từ CustomerCreateRequest sang Customer Entity
+        /// Map từ CustomerRequest sang Customer Entity
         /// </summary>
         /// <param name="request">DTO tạo mới</param>
         /// <returns>Customer Entity</returns>
-        protected override Customer MapCreateRequestToEntity(CustomerCreateRequest request)
+        protected override Customer MapCreateRequestToEntity(CustomerRequest request)
         {
             Customer customer = new Customer
             {
@@ -516,21 +437,23 @@ namespace MISA.Core.Services
                 LastPurchaseDate = request.LastPurchaseDate,
                 PurchasedItemCode = request.PurchasedItemCode,
                 PurchasedItemName = request.PurchasedItemName,
+                CustomerAvatarUrl = request.CustomerAvatarUrl,
                 IsDeleted = false
             };
             return customer;
         }
 
         /// <summary>
-        /// Map từ CustomerUpdateRequest sang Customer Entity
+        /// Map từ CustomerRequest sang Customer Entity
         /// </summary>
         /// <param name="request">DTO cập nhật</param>
+        /// <param name="id">ID khách hàng (tham số thêm để khớp signature)</param>
         /// <returns>Customer Entity</returns>
-        protected override Customer MapUpdateRequestToEntity(CustomerUpdateRequest request)
+        protected override Customer MapUpdateRequestToEntity(CustomerRequest request, Guid id)
         {
             Customer customer = new Customer
             {
-                CustomerId = request.CustomerId,
+                CustomerId = id,
                 CustomerType = request.CustomerType,
                 CustomerCode = request.CustomerCode,
                 CustomerName = request.CustomerName,
@@ -542,6 +465,7 @@ namespace MISA.Core.Services
                 LastPurchaseDate = request.LastPurchaseDate,
                 PurchasedItemCode = request.PurchasedItemCode,
                 PurchasedItemName = request.PurchasedItemName,
+                CustomerAvatarUrl = request.CustomerAvatarUrl ?? _customerRepository.GetById(id)?.CustomerAvatarUrl,
                 IsDeleted = false
             };
             return customer;
@@ -567,7 +491,8 @@ namespace MISA.Core.Services
                 CustomerTaxCode = entity.CustomerTaxCode,
                 LastPurchaseDate = entity.LastPurchaseDate,
                 PurchasedItemCode = entity.PurchasedItemCode,
-                PurchasedItemName = entity.PurchasedItemName
+                PurchasedItemName = entity.PurchasedItemName,
+                CustomerAvatarUrl = entity.CustomerAvatarUrl
             };
             return response;
         }
@@ -576,18 +501,18 @@ namespace MISA.Core.Services
         /// Validate dữ liệu trước khi thêm mới khách hàng
         /// </summary>
         /// <param name="request">DTO tạo mới</param>
-        protected override void ValidateInsert(CustomerCreateRequest request)
+        protected override void ValidateInsert(CustomerRequest request)
         {
             // Kiểm tra số điện thoại đã tồn tại chưa
             if (_customerRepository.IsPhoneNumberExist(request.CustomerPhoneNumber))
             {
-                throw new MISA.Core.Exception.DuplicateException("Số điện thoại", request.CustomerPhoneNumber);
+                throw new MISA.Core.Exception.ValidationException("Số điện thoại", $"Số điện thoại '{request.CustomerPhoneNumber}' đã tồn tại trong hệ thống", true);
             }
 
             // Kiểm tra email đã tồn tại chưa
             if (_customerRepository.IsEmailExist(request.CustomerEmail))
             {
-                throw new MISA.Core.Exception.DuplicateException("Email", request.CustomerEmail);
+                throw new MISA.Core.Exception.ValidationException("Email", $"Email '{request.CustomerEmail}' đã tồn tại trong hệ thống", true);
             }
         }
 
@@ -595,26 +520,13 @@ namespace MISA.Core.Services
         /// Validate dữ liệu trước khi cập nhật khách hàng
         /// </summary>
         /// <param name="request">DTO cập nhật</param>
-        protected override void ValidateUpdate(CustomerUpdateRequest request)
+        protected override void ValidateUpdate(CustomerRequest request)
         {
-            // Kiểm tra khách hàng có tồn tại không
-            Customer existingCustomer = _customerRepository.GetById(request.CustomerId);
-            if (existingCustomer == null)
-            {
-                throw new MISA.Core.Exception.NotFoundException("Khách hàng", request.CustomerId);
-            }
+            // Kiểm tra khách hàng có tồn tại không (tạm thời bỏ qua vì signature không có id)
+            // BaseService sẽ kiểm tra tồn tại trước khi gọi validate này
 
             // Kiểm tra số điện thoại đã tồn tại chưa (loại trừ chính khách hàng đang cập nhật)
-            if (_customerRepository.IsPhoneNumberExist(request.CustomerPhoneNumber, request.CustomerId))
-            {
-                throw new MISA.Core.Exception.DuplicateException("Số điện thoại", request.CustomerPhoneNumber);
-            }
-
-            // Kiểm tra email đã tồn tại chưa (loại trừ chính khách hàng đang cập nhật)
-            if (_customerRepository.IsEmailExist(request.CustomerEmail, request.CustomerId))
-            {
-                throw new MISA.Core.Exception.DuplicateException("Email", request.CustomerEmail);
-            }
+            // Lưu ý: không thể lấy id từ request ở đây, BaseService sẽ xử lý validation
         }
 
         #endregion

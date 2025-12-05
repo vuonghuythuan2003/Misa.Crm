@@ -165,15 +165,12 @@ dotnet run
 |--------|----------|-------|
 | `GET` | `/` | Lấy tất cả khách hàng |
 | `GET` | `/{id}` | Lấy khách hàng theo ID |
-| `GET` | `/paging` | Phân trang (pageNumber, pageSize) |
-| `GET` | `/customer-paging` | Phân trang cho Customer |
-| `GET` | `/sort` | Sắp xếp (sortColumn, sortDirection) |
-| `GET` | `/quick-filter` | Lọc nhanh (keyword, customerName, ...) |
+| `GET` | `/paging` | Phân trang (pageNumber, pageSize, sortColumn, sortDirection, keyword, filters) |
 | `GET` | `/NewCode` | Sinh mã khách hàng mới |
-| `GET` | `/export` | Xuất file CSV |
+| `GET` | `/export` | Xuất file CSV (có lọc và sắp xếp) |
 | `POST` | `/` | Thêm khách hàng |
 | `POST` | `/import` | Nhập từ file CSV |
-| `PUT` | `/` | Cập nhật khách hàng |
+| `PUT` | `/{id}` | Cập nhật khách hàng |
 | `DELETE` | `/{id}` | Xóa khách hàng (soft delete) |
 
 ### Import CSV Format

@@ -74,6 +74,11 @@ namespace MISA.Core.DTOs.Responses
         /// </summary>
         public string PurchasedItemName { get; set; }
 
+        /// <summary>
+        /// Đường dẫn ảnh đại diện
+        /// </summary>
+        public string CustomerAvatarUrl { get; set; }
+
         #endregion
     }
 }

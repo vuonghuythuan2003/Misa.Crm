@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 namespace MISA.Core.DTOs.Requests
 {
     /// <summary>
-    /// DTO để tạo mới khách hàng
+    /// DTO để tạo mới hoặc cập nhật khách hàng
     /// </summary>
-    /// Created by: vuonghuythuan2003 - 02/12/2024
-    public class CustomerCreateRequest
+    /// Created by: vuonghuythuan2003 - 04/12/2024
+    public class CustomerRequest
     {
         #region Property
 
@@ -88,6 +88,12 @@ namespace MISA.Core.DTOs.Requests
         /// </summary>
         [MaxLength(100, ErrorMessage = "Tên hàng hóa không được vượt quá 100 ký tự")]
         public string? PurchasedItemName { get; set; }
+
+        /// <summary>
+        /// Ảnh đại diện khách hàng (URL)
+        /// </summary>
+        [MaxLength(500, ErrorMessage = "URL ảnh không được vượt quá 500 ký tự")]
+        public string? CustomerAvatarUrl { get; set; }
         #endregion
     }
 }

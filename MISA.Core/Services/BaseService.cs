@@ -14,12 +14,11 @@ namespace MISA.Core.Services
     /// Base service triển khai IBaseService với Request/Response DTO pattern
     /// </summary>
     /// <typeparam name="TEntity">Kiểu entity</typeparam>
-    /// <typeparam name="TCreateRequest">Kiểu DTO cho tạo mới</typeparam>
-    /// <typeparam name="TUpdateRequest">Kiểu DTO cho cập nhật</typeparam>
+    /// <typeparam name="TRequest">Kiểu DTO cho tạo mới và cập nhật</typeparam>
     /// <typeparam name="TResponse">Kiểu DTO trả về</typeparam>
     /// Created by: vuonghuythuan2003 - 03/12/2024
-    public class BaseService<TEntity, TCreateRequest, TUpdateRequest, TResponse>
-        : IBaseService<TCreateRequest, TUpdateRequest, TResponse>
+    public class BaseService<TEntity, TRequest, TResponse>
+        : IBaseService<TRequest, TResponse>
     {
         #region Declaration
 
@@ -80,7 +79,7 @@ namespace MISA.Core.Services
         /// </summary>
         /// <param name="request">DTO chứa thông tin cần thêm</param>
         /// <returns>Response DTO của bản ghi đã thêm</returns>
-        public virtual TResponse Insert(TCreateRequest request)
+        public virtual TResponse Insert(TRequest request)
         {
             // Validate dữ liệu trước khi thêm
             ValidateInsert(request);
@@ -96,20 +95,29 @@ namespace MISA.Core.Services
         }
 
         /// <summary>
-        /// Cập nhật từ Request DTO
+        /// Cập nhật bản ghi
+        /// Lưu ý: ID được truyền riêng, không nằm trong request (clear hơn)
         /// </summary>
+        /// <param name="id">ID của entity cần cập nhật</param>
         /// <param name="request">DTO chứa thông tin cần cập nhật</param>
         /// <returns>Response DTO của bản ghi đã cập nhật</returns>
-        public virtual TResponse Update(TUpdateRequest request)
+        public virtual TResponse Update(Guid id, TRequest request)
         {
+            // Kiểm tra tồn tại trước khi cập nhật
+            TEntity? entity = _baseRepository.GetById(id);
+            if (entity == null)
+            {
+                throw new MISA.Core.Exception.NotFoundException(typeof(TEntity).Name, id);
+            }
+
             // Validate dữ liệu trước khi cập nhật
             ValidateUpdate(request);
 
-            // Map từ Request DTO sang Entity
-            TEntity entity = MapUpdateRequestToEntity(request);
+            // Map từ Request DTO sang Entity với ID từ parameter
+            TEntity updatedEntity = MapUpdateRequestToEntity(request, id);
 
             // Cập nhật vào database
-            TEntity updatedEntity = _baseRepository.Update(entity);
+            updatedEntity = _baseRepository.Update(updatedEntity);
 
             // Trả về Response DTO
             return MapEntityToResponse(updatedEntity);
@@ -130,6 +138,19 @@ namespace MISA.Core.Services
             }
 
             return _baseRepository.SoftDelete(entityId);
+        }
+
+        /// <summary>
+        /// Xóa mềm hàng loạt bản ghi (soft delete many)
+        /// </summary>
+        /// <param name="ids">Danh sách ID của entities cần xóa</param>
+        /// <returns>Số bản ghi bị ảnh hưởng</returns>
+        public virtual int DeleteMany(List<Guid> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return 0;
+
+            return _baseRepository.SoftDeleteMany(ids);
         }
 
         /// <summary>
@@ -162,7 +183,7 @@ namespace MISA.Core.Services
         /// </summary>
         /// <param name="request">DTO tạo mới</param>
         /// <returns>Entity</returns>
-        protected virtual TEntity MapCreateRequestToEntity(TCreateRequest request)
+        protected virtual TEntity MapCreateRequestToEntity(TRequest request)
         {
             throw new NotImplementedException("Lớp con phải override method MapCreateRequestToEntity");
         }
@@ -171,8 +192,9 @@ namespace MISA.Core.Services
         /// Map từ UpdateRequest DTO sang Entity (override ở lớp con)
         /// </summary>
         /// <param name="request">DTO cập nhật</param>
+        /// <param name="id">ID của entity cần cập nhật</param>
         /// <returns>Entity</returns>
-        protected virtual TEntity MapUpdateRequestToEntity(TUpdateRequest request)
+        protected virtual TEntity MapUpdateRequestToEntity(TRequest request, Guid id)
         {
             throw new NotImplementedException("Lớp con phải override method MapUpdateRequestToEntity");
         }
@@ -191,7 +213,7 @@ namespace MISA.Core.Services
         /// Validate dữ liệu trước khi thêm mới (có thể override ở lớp con)
         /// </summary>
         /// <param name="request">DTO tạo mới</param>
-        protected virtual void ValidateInsert(TCreateRequest request)
+        protected virtual void ValidateInsert(TRequest request)
         {
             // Lớp con có thể override để thêm validation riêng
         }
@@ -200,7 +222,7 @@ namespace MISA.Core.Services
         /// Validate dữ liệu trước khi cập nhật (có thể override ở lớp con)
         /// </summary>
         /// <param name="request">DTO cập nhật</param>
-        protected virtual void ValidateUpdate(TUpdateRequest request)
+        protected virtual void ValidateUpdate(TRequest request)
         {
             // Lớp con có thể override để thêm validation riêng
         }
