@@ -64,7 +64,7 @@ namespace MISA.Crm.Development.Controllers
 
         /// <summary>
         /// Nhập khách hàng từ file CSV
-        /// Các cột bắt buộc: FullName/CustomerName, Phone/CustomerPhoneNumber, Email/CustomerEmail, Address/CustomerAddress, CustomerType
+        /// Các cột bắt buộc: FullName/CustomerName, Phone/CustomerPhoneNumber, Email/CustomerEmail, Address/CustomerShippingAddress/CustomerAddress, CustomerType
         /// Tự động sinh mã khách hàng (KH + yyyyMM + 6 chữ số), validate dữ liệu, kiểm tra trùng lặp
         /// </summary>
         /// <param name="file">File CSV chứa dữ liệu khách hàng (tối đa 5MB)</param>

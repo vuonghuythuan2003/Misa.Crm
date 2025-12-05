@@ -175,10 +175,10 @@ dotnet run
 
 ### Import CSV Format
 
-File CSV cần có các cột: `FullName`, `Phone`, `Email`, `Address`, `CustomerType`
+File CSV cần có các cột: `FullName`, `Phone`, `Email`, `CustomerShippingAddress` (hoặc `Address`), `CustomerType`
 
 ```csv
-FullName,Phone,Email,Address,CustomerType
+FullName,Phone,Email,CustomerShippingAddress,CustomerType
 Nguyễn Văn A,0901234567,email@test.com,123 ABC Q1 HCM,Individual
 ```
 

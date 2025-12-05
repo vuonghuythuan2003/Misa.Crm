@@ -134,7 +134,7 @@ namespace MISA.Core.Services
                     { "FullName", new[] { "FullName", "CustomerName" } },
                     { "Phone", new[] { "Phone", "CustomerPhoneNumber", "PhoneNumber" } },
                     { "Email", new[] { "Email", "CustomerEmail" } },
-                    { "Address", new[] { "Address", "CustomerShippingAddress", "ShippingAddress" } },
+                    { "Address", new[] { "Address", "CustomerShippingAddress", "ShippingAddress", "CustomerAddress", "CustomerAdress" } },
                     { "CustomerType", new[] { "CustomerType" } }
                 };
 

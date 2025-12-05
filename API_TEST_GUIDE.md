@@ -44,7 +44,7 @@ GET /api/v1/customer/customer-paging?pageNumber=1&pageSize=10
       "customerType": 1,
       "customerPhoneNumber": "0912345678",
       "customerEmail": "nguyenvana@example.com",
-      "customerAddress": "123 Đường Nguyễn Huệ, TP.HCM",
+      "customerShippingAddress": "123 Đường Nguyễn Huệ, TP.HCM",
       "customerShippingAddress": "123 Đường Nguyễn Huệ, TP.HCM",
       "customerTaxCode": "0123456789",
       "lastPurchaseDate": "2025-12-04T10:30:00",
@@ -86,7 +86,7 @@ GET /api/v1/customer/550e8400-e29b-41d4-a716-446655440000
     "customerType": 1,
     "customerPhoneNumber": "0912345678",
     "customerEmail": "nguyenvana@example.com",
-    "customerAddress": "123 Đường Nguyễn Huệ, TP.HCM",
+    "customerShippingAddress": "123 Đường Nguyễn Huệ, TP.HCM",
     "customerShippingAddress": "123 Đường Nguyễn Huệ, TP.HCM",
     "customerTaxCode": "0123456789",
     "lastPurchaseDate": "2025-12-04T10:30:00",
@@ -116,7 +116,7 @@ customerName: Trần Thị B
 customerType: 1
 customerPhoneNumber: 0987654321
 customerEmail: tranthib@example.com
-customerAddress: 456 Đường Lê Lợi, TP.HCM
+customerShippingAddress: 456 Đường Lê Lợi, TP.HCM
 customerShippingAddress: 456 Đường Lê Lợi, TP.HCM
 customerTaxCode: 9876543210
 lastPurchaseDate: 2025-12-04T14:00:00
@@ -136,7 +136,7 @@ file: [chọn file ảnh từ máy tính]
     "customerType": 1,
     "customerPhoneNumber": "0987654321",
     "customerEmail": "tranthib@example.com",
-    "customerAddress": "456 Đường Lê Lợi, TP.HCM",
+    "customerShippingAddress": "456 Đường Lê Lợi, TP.HCM",
     "customerShippingAddress": "456 Đường Lê Lợi, TP.HCM",
     "customerTaxCode": "9876543210",
     "lastPurchaseDate": "2025-12-04T14:00:00",
@@ -161,7 +161,7 @@ customerName: Trần Thị B
 customerType: 1
 customerPhoneNumber: 0987654321
 customerEmail: tranthib@example.com
-customerAddress: 456 Đường Lê Lợi, TP.HCM
+customerShippingAddress: 456 Đường Lê Lợi, TP.HCM
 customerShippingAddress: 456 Đường Lê Lợi, TP.HCM
 customerTaxCode: 9876543210
 lastPurchaseDate: 2025-12-04T14:00:00
@@ -191,7 +191,7 @@ customerName: Nguyễn Văn A (Updated)
 customerType: 2
 customerPhoneNumber: 0912345679
 customerEmail: nguyenvana.updated@example.com
-customerAddress: 789 Đường Pasteur, TP.HCM
+customerShippingAddress: 789 Đường Pasteur, TP.HCM
 customerShippingAddress: 789 Đường Pasteur, TP.HCM
 customerTaxCode: 0123456790
 lastPurchaseDate: 2025-12-04T15:30:00
@@ -211,7 +211,7 @@ file: [chọn file ảnh mới từ máy tính] (Optional)
     "customerType": 2,
     "customerPhoneNumber": "0912345679",
     "customerEmail": "nguyenvana.updated@example.com",
-    "customerAddress": "789 Đường Pasteur, TP.HCM",
+    "customerShippingAddress": "789 Đường Pasteur, TP.HCM",
     "customerShippingAddress": "789 Đường Pasteur, TP.HCM",
     "customerTaxCode": "0123456790",
     "lastPurchaseDate": "2025-12-04T15:30:00",
@@ -264,7 +264,7 @@ file: [chọn file CSV từ máy tính]
 
 ### CSV File Format
 ```
-CustomerCode,CustomerName,CustomerType,CustomerPhoneNumber,CustomerEmail,CustomerAddress,CustomerShippingAddress,CustomerTaxCode
+CustomerCode,CustomerName,CustomerType,CustomerPhoneNumber,CustomerEmail,CustomerShippingAddress,CustomerTaxCode
 KH202512000003,Phạm Văn C,1,0912111111,phamvanc@example.com,111 Đường Trần Hưng Đạo,111 Đường Trần Hưng Đạo,1111111111
 KH202512000004,Hoàng Thị D,2,0912222222,hoangthid@example.com,222 Đường Bến Thành,222 Đường Bến Thành,2222222222
 KH202512000005,Vũ Văn E,1,0912333333,vuvanE@example.com,333 Đường Ngô Quyền,333 Đường Ngô Quyền,3333333333

@@ -159,11 +159,11 @@ namespace MISA.Infrastructure.Repositories
 
             string sqlCommand = @"INSERT INTO customer 
                 (customer_id, customer_type, customer_code, customer_name, customer_phone_number, 
-                 customer_email, customer_address, customer_shipping_address, customer_tax_code, 
+                 customer_email, customer_shipping_address, customer_tax_code, 
                  last_purchase_date, purchased_item_code, purchased_item_name, is_deleted, customer_avatar_url)
                 VALUES 
                 (@CustomerId, @CustomerType, @CustomerCode, @CustomerName, @CustomerPhoneNumber, 
-                 @CustomerEmail, @CustomerAddress, @CustomerShippingAddress, @CustomerTaxCode, 
+                 @CustomerEmail, @CustomerShippingAddress, @CustomerTaxCode, 
                  @LastPurchaseDate, @PurchasedItemCode, @PurchasedItemName, @IsDeleted, @CustomerAvatarUrl)";
 
             return dbConnection.Execute(sqlCommand, customers);

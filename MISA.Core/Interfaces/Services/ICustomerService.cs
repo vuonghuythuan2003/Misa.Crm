@@ -24,7 +24,7 @@ namespace MISA.Core.Interfaces.Services
 
         /// <summary>
         /// Nhập khách hàng từ file CSV
-        /// Các cột bắt buộc: FullName/CustomerName, Phone/CustomerPhoneNumber, Email/CustomerEmail, Address/CustomerAddress, CustomerType
+        /// Các cột bắt buộc: FullName/CustomerName, Phone/CustomerPhoneNumber, Email/CustomerEmail, Address/CustomerShippingAddress/CustomerAddress, CustomerType
         /// Tự động sinh mã khách hàng (KH + yyyyMM + 6 chữ số), validate dữ liệu, kiểm tra trùng lặp (trong file và database)
         /// </summary>
         /// <param name="csvStream">Stream của file CSV</param>
