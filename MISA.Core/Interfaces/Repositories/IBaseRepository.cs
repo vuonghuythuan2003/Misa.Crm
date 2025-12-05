@@ -62,11 +62,5 @@ namespace MISA.Core.Interfaces.Repositories
         /// <param name="pagingRequest">Thông tin phân trang và sắp xếp</param>
         /// <returns>Tuple chứa danh sách entity và tổng số bản ghi</returns>
         (List<T> Data, int TotalRecords) GetPaging(PagingRequest pagingRequest);
-
-        /// <summary>
-        /// Lấy tổng số bản ghi (không bao gồm bản ghi đã xóa mềm)
-        /// </summary>
-        /// <returns>Tổng số bản ghi</returns>
-        int GetTotalCount();
     }
 }

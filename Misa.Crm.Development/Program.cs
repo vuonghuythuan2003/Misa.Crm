@@ -24,6 +24,19 @@ builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 // Services
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+// Cấu hình CORS để cho phép frontend từ localhost:5173
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowVueFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Sử dụng Exception Middleware (đặt đầu tiên để bắt tất cả exception)
@@ -37,6 +50,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowVueFrontend");
 
 app.UseAuthorization();
 

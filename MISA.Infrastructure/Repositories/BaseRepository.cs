@@ -249,17 +249,6 @@ namespace MISA.Infrastructure.Repositories
             return (data, totalRecords);
         }
 
-        /// <summary>
-        /// Lấy tổng số bản ghi (không bao gồm bản ghi đã xóa mềm)
-        /// </summary>
-        /// <returns>Tổng số bản ghi</returns>
-        public int GetTotalCount()
-        {
-            string tableName = ToSnakeCase(typeof(T).Name);
-            string sqlCommand = $"SELECT COUNT(*) FROM {tableName} WHERE is_deleted = 0";
-            return dbConnection.ExecuteScalar<int>(sqlCommand);
-        }
-
         #endregion
     }
 }

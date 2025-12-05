@@ -52,13 +52,6 @@ namespace MISA.Core.DTOs.Requests
         public string CustomerEmail { get; set; }
 
         /// <summary>
-        /// Địa chỉ liên hệ chính
-        /// </summary>
-        [Required(ErrorMessage = "Địa chỉ không được để trống")]
-        [MaxLength(255, ErrorMessage = "Địa chỉ không được vượt quá 255 ký tự")]
-        public string CustomerAddress { get; set; }
-
-        /// <summary>
         /// Địa chỉ giao hàng
         /// </summary>
         [Required(ErrorMessage = "Địa chỉ giao hàng không được để trống")]

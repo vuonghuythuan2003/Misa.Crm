@@ -60,26 +60,6 @@ namespace MISA.Crm.Development.Controllers
 
         #endregion
 
-        #region Phân trang
-
-        /// <summary>
-        /// Lấy danh sách khách hàng có phân trang
-        /// </summary>
-        /// <param name="pagingRequest">Thông tin phân trang (PageNumber, PageSize)</param>
-        /// <returns>Danh sách khách hàng với thông tin phân trang</returns>
-        [HttpGet("customer-paging")]
-        public IActionResult GetCustomerPaging([FromQuery] PagingRequest pagingRequest)
-        {
-            PagingResponse<CustomerResponse> result = _customerService.GetPaging(pagingRequest);
-            return Ok(ApiResponse<List<CustomerResponse>>.Success(
-                result.Data,
-                result.PageNumber,
-                result.PageSize,
-                result.TotalRecords));
-        }
-
-        #endregion
-
         #region Nhập CSV
 
         /// <summary>

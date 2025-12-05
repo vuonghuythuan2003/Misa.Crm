@@ -45,11 +45,6 @@ namespace MISA.Core.Entities
         public string CustomerEmail { get; set; }
 
         /// <summary>
-        /// Địa chỉ liên hệ chính
-        /// </summary>
-        public string CustomerAddress { get; set; }
-
-        /// <summary>
         /// Địa chỉ giao hàng
         /// </summary>
         public string CustomerShippingAddress { get; set; }
