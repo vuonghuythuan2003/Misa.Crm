@@ -59,11 +59,10 @@ namespace MISA.Core.DTOs.Requests
         public string CustomerShippingAddress { get; set; }
 
         /// <summary>
-        /// Mã số thuế
+        /// Mã số thuế (không bắt buộc)
         /// </summary>
-        [Required(ErrorMessage = "Mã số thuế không được để trống")]
         [MaxLength(20, ErrorMessage = "Mã số thuế không được vượt quá 20 ký tự")]
-        public string CustomerTaxCode { get; set; }
+        public string? CustomerTaxCode { get; set; }
 
         /// <summary>
         /// Ngày mua hàng gần nhất (chỉ lấy ngày, không lấy giờ)

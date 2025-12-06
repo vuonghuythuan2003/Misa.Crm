@@ -52,7 +52,7 @@ namespace MISA.Core.Entities
         /// <summary>
         /// Mã số thuế
         /// </summary>
-        public string CustomerTaxCode { get; set; }
+        public string? CustomerTaxCode { get; set; }
 
         /// <summary>
         /// Ngày mua hàng gần nhất (chỉ lấy ngày, không lấy giờ)
@@ -62,17 +62,17 @@ namespace MISA.Core.Entities
         /// <summary>
         /// Hàng hóa đã mua
         /// </summary>
-        public string PurchasedItemCode { get; set; }
+        public string? PurchasedItemCode { get; set; }
 
         /// <summary>
         /// Tên hàng hóa đã mua
         /// </summary>
-        public string PurchasedItemName { get; set; }
+        public string? PurchasedItemName { get; set; }
 
         /// <summary>
         /// Đường dẫn ảnh đại diện
         /// </summary>
-        public string CustomerAvatarUrl { get; set; }
+        public string? CustomerAvatarUrl { get; set; }
 
         /// <summary>
         /// Trạng thái xóa

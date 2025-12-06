@@ -184,9 +184,12 @@ namespace MISA.Core.Services
                     string phone = GetColumnValue(columns, columnMapping, mappedColumns["Phone"]);
                     string email = GetColumnValue(columns, columnMapping, mappedColumns["Email"]);
                     string address = GetColumnValue(columns, columnMapping, mappedColumns["Address"]);
+                    string taxCode = columnMapping.ContainsKey("TaxCode")
+                        ? GetColumnValue(columns, columnMapping, mappedColumns["TaxCode"])
+                        : string.Empty;
                     string customerType = GetColumnValue(columns, columnMapping, mappedColumns["CustomerType"]);
 
-                    List<string> errors = ValidateCustomerData(fullName, phone, email, address, customerType, phonesInFile, emailsInFile);
+                    List<string> errors = ValidateCustomerData(fullName, phone, email, address, taxCode, customerType, phonesInFile, emailsInFile);
 
                     if (errors.Count > 0)
                     {
@@ -209,7 +212,7 @@ namespace MISA.Core.Services
                         CustomerPhoneNumber = phone,
                         CustomerEmail = email,
                         CustomerShippingAddress = address,
-                        CustomerTaxCode = "",
+                        CustomerTaxCode = string.IsNullOrWhiteSpace(taxCode) ? null : taxCode,
                         LastPurchaseDate = null,
                         PurchasedItemCode = null,
                         PurchasedItemName = null,
@@ -232,7 +235,7 @@ namespace MISA.Core.Services
         /// <summary>
         /// Validate dữ liệu khách hàng từ CSV
         /// </summary>
-        private List<string> ValidateCustomerData(string fullName, string phone, string email, string address, 
+        private List<string> ValidateCustomerData(string fullName, string phone, string email, string address, string taxCode,
             string customerType, HashSet<string> phonesInFile, HashSet<string> emailsInFile)
         {
             List<string> errors = new List<string>();
@@ -274,6 +277,10 @@ namespace MISA.Core.Services
                 errors.Add("Địa chỉ không được để trống.");
             else if (address.Length > 255)
                 errors.Add("Địa chỉ không được vượt quá 255 ký tự.");
+
+            // Validate TaxCode (optional)
+            if (!string.IsNullOrWhiteSpace(taxCode) && taxCode.Length > 20)
+                errors.Add("Mã số thuế không được vượt quá 20 ký tự.");
 
             // Validate CustomerType
             if (string.IsNullOrWhiteSpace(customerType))
