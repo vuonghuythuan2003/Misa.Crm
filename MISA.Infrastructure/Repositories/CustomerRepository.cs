@@ -76,7 +76,7 @@ namespace MISA.Infrastructure.Repositories
         /// <returns>True nếu đã tồn tại, False nếu chưa</returns>
         public bool IsCustomerCodeExist(string customerCode)
         {
-            string sqlCommand = "SELECT COUNT(*) FROM customer WHERE customer_code = @CustomerCode AND is_deleted = 0";
+            string sqlCommand = "SELECT COUNT(*) FROM customer WHERE customer_code = @CustomerCode";
             return dbConnection.ExecuteScalar<int>(sqlCommand, new { CustomerCode = customerCode }) > 0;
         }
     
@@ -90,7 +90,6 @@ namespace MISA.Infrastructure.Repositories
             string sqlCommand = @"SELECT customer_code 
                                   FROM customer 
                                   WHERE customer_code LIKE @Prefix 
-                                  AND is_deleted = 0 
                                   ORDER BY CAST(SUBSTRING(customer_code, @PrefixLength + 1) AS UNSIGNED) DESC 
                                   LIMIT 1";
             
