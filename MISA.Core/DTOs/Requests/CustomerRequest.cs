@@ -13,6 +13,10 @@ namespace MISA.Core.DTOs.Requests
     /// Created by: vuonghuythuan2003 - 04/12/2024
     public class CustomerRequest
     {
+        /// <summary>
+        /// ID khách hàng (dùng cho update)
+        /// </summary>
+        public Guid CustomerId { get; set; }
         #region Property
 
         /// <summary>

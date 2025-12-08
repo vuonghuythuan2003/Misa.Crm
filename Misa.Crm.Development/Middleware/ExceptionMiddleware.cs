@@ -60,7 +60,7 @@ namespace MISA.Crm.Development.Middleware
             }
             catch (System.Exception ex)
             {
-                _logger.LogError(ex, "An unhandled exception has occurred");
+                _logger.LogError(ex, "Đã xảy ra một ngoại lệ chưa được xử lý");
                 await HandleExceptionAsync(context, ex);
             }
         }

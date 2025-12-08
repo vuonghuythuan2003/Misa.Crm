@@ -108,6 +108,7 @@ namespace MISA.Infrastructure.Repositories
         {
             string tableName = ToSnakeCase(typeof(T).Name);
             var properties = typeof(T).GetProperties();
+            // lấy 1 phần tử thay thành phàn tử mới.
             string columnNames = string.Join(", ", properties.Select(p => ToSnakeCase(p.Name)));
             string parameterNames = string.Join(", ", properties.Select(p => "@" + p.Name));
             string sqlCommand = $"INSERT INTO {tableName} ({columnNames}) VALUES ({parameterNames})";

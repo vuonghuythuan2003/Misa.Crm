@@ -18,7 +18,7 @@ namespace MISA.Core.DTOs.Responses
         /// <summary>
         /// Danh sách dữ liệu của trang hiện tại
         /// </summary>
-        public List<T> Data { get; set; } = new List<T>();
+        public List<T> Data { get; set; }  
 
         /// <summary>
         /// Tổng số bản ghi

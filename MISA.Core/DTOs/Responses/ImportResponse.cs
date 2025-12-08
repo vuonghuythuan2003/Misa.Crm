@@ -15,22 +15,22 @@ namespace MISA.Core.DTOs.Responses
         #region Property
 
         /// <summary>
-        /// Tổng số dòng trong file
+        /// Tổng số dòng dữ liệu đã được đọc từ file
         /// </summary>
         public int TotalRows { get; set; }
 
         /// <summary>
-        /// Số dòng nhập thành công
+        /// Số dòng dữ liệu đã được nhập thành công vào hệ thống
         /// </summary>
         public int SuccessCount { get; set; }
 
         /// <summary>
-        /// Số dòng lỗi
+        /// Số dòng dữ liệu bị lỗi và không thể nhập vào hệ thống
         /// </summary>
         public int ErrorCount { get; set; }
 
         /// <summary>
-        /// Danh sách các dòng lỗi với thông tin chi tiết
+        /// Danh sách chi tiết các dòng bị lỗi, cung cấp thông tin cụ thể về từng lỗi.
         /// </summary>
         public List<ImportErrorDetail> Errors { get; set; } = new List<ImportErrorDetail>();
 
@@ -43,17 +43,17 @@ namespace MISA.Core.DTOs.Responses
     public class ImportErrorDetail
     {
         /// <summary>
-        /// Số dòng trong file (bắt đầu từ 1, không tính header)
+        /// Số thứ tự của dòng bị lỗi trong file nguồn
         /// </summary>
         public int RowNumber { get; set; }
 
         /// <summary>
-        /// Dữ liệu của dòng bị lỗi
+        /// Dữ liệu thô của dòng bị lỗi. Điều này giúp người dùng dễ dàng xác định dòng nào trong file gốc cần sửa.
         /// </summary>
         public string RowData { get; set; }
 
         /// <summary>
-        /// Danh sách các lỗi
+        /// Danh sách các thông báo lỗi chi tiết cho dòng này
         /// </summary>
         public List<string> ErrorMessages { get; set; } = new List<string>();
     }

@@ -66,14 +66,14 @@ namespace MISA.Core.Services
             {
                 // Lấy 6 số cuối (sau phần KH + yyyyMM) và tăng lên 1
                 string sequenceStr = maxCode.Substring(prefix.Length); // Lấy từ vị trí 8 trở đi
-                
+
                 // Kiểm tra xem phần lấy ra có phải toàn số không
                 if (int.TryParse(sequenceStr, out int currentSequence))
                 {
                     nextSequence = currentSequence + 1;
                 }
             }
-            
+
             // Định dạng: prefix + 6 số tăng dần (D6 = định dạng 6 chữ số, padding 0 nếu cần)
             return prefix + nextSequence.ToString("D6");
         }
@@ -88,7 +88,7 @@ namespace MISA.Core.Services
         {
             ImportResponse response = new ImportResponse();
             List<Customer> validCustomers = new List<Customer>();
-            
+
             HashSet<string> emailsInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> phonesInFile = new HashSet<string>();
 
@@ -97,7 +97,7 @@ namespace MISA.Core.Services
             // Khởi tạo counter sinh mã
             string yearMonth = DateTime.Now.ToString("yyyyMM");
             string prefix = "KH" + yearMonth;
-            
+
             string maxCodeInDb = _customerRepository.GetMaxCustomerCode(prefix);
             int nextSequence = 1;
             if (!string.IsNullOrEmpty(maxCodeInDb) && maxCodeInDb.Length > prefix.Length)
@@ -114,7 +114,7 @@ namespace MISA.Core.Services
                 if (string.IsNullOrWhiteSpace(headerLine))
                 {
                     throw new MISA.Core.Exception.ValidationException(
-                        MISA.Core.Exception.ErrorCode.EmptyFile, 
+                        MISA.Core.Exception.ErrorCode.EmptyFile,
                         "File CSV không có dữ liệu hoặc thiếu header.",
                         null);
                 }
@@ -162,7 +162,7 @@ namespace MISA.Core.Services
                 if (missingColumns.Count > 0)
                 {
                     throw new MISA.Core.Exception.ValidationException(
-                        MISA.Core.Exception.ErrorCode.MissingRequiredColumns, 
+                        MISA.Core.Exception.ErrorCode.MissingRequiredColumns,
                         $"File CSV thiếu các cột bắt buộc: {string.Join(", ", missingColumns)}",
                         null);
                 }
@@ -509,13 +509,19 @@ namespace MISA.Core.Services
             // Kiểm tra số điện thoại đã tồn tại chưa
             if (_customerRepository.IsPhoneNumberExist(request.CustomerPhoneNumber))
             {
-                throw new MISA.Core.Exception.ValidationException("Số điện thoại", $"Số điện thoại '{request.CustomerPhoneNumber}' đã tồn tại trong hệ thống", true);
+                throw new MISA.Core.Exception.ValidationException(
+                    MISA.Core.Exception.ErrorCode.DuplicatePhoneNumber,
+                    $"Số điện thoại '{request.CustomerPhoneNumber}' đã tồn tại trong hệ thống",
+                    null);
             }
 
             // Kiểm tra email đã tồn tại chưa
             if (_customerRepository.IsEmailExist(request.CustomerEmail))
             {
-                throw new MISA.Core.Exception.ValidationException("Email", $"Email '{request.CustomerEmail}' đã tồn tại trong hệ thống", true);
+                throw new MISA.Core.Exception.ValidationException(
+                    MISA.Core.Exception.ErrorCode.DuplicateEmail,
+                    $"Email '{request.CustomerEmail}' đã tồn tại trong hệ thống",
+                    null);
             }
         }
 
@@ -523,13 +529,41 @@ namespace MISA.Core.Services
         /// Validate dữ liệu trước khi cập nhật khách hàng
         /// </summary>
         /// <param name="request">DTO cập nhật</param>
-        protected override void ValidateUpdate(CustomerRequest request)
+        protected void ValidateUpdate(CustomerRequest request, Guid customerId)
         {
-            // Kiểm tra khách hàng có tồn tại không (tạm thời bỏ qua vì signature không có id)
-            // BaseService sẽ kiểm tra tồn tại trước khi gọi validate này
+            if (_customerRepository.IsPhoneNumberExist(request.CustomerPhoneNumber, customerId))
+            {
+                throw new MISA.Core.Exception.ValidationException(
+                    MISA.Core.Exception.ErrorCode.DuplicatePhoneNumber,
+                    $"Số điện thoại '{request.CustomerPhoneNumber}' đã tồn tại trong hệ thống",
+                    null);
+            }
 
-            // Kiểm tra số điện thoại đã tồn tại chưa (loại trừ chính khách hàng đang cập nhật)
-            // Lưu ý: không thể lấy id từ request ở đây, BaseService sẽ xử lý validation
+            if (_customerRepository.IsEmailExist(request.CustomerEmail, customerId))
+            {
+                throw new MISA.Core.Exception.ValidationException(
+                    MISA.Core.Exception.ErrorCode.DuplicateEmail,
+                    $"Email '{request.CustomerEmail}' đã tồn tại trong hệ thống",
+                    null);
+            }
+        }
+
+        public override CustomerResponse Update(Guid id, CustomerRequest request)
+        {
+            // Kiểm tra tồn tại trước khi cập nhật
+            var entity = _customerRepository.GetById(id);
+            if (entity == null)
+            {
+                throw new MISA.Core.Exception.NotFoundException(typeof(Customer).Name, id);
+            }
+            // Validate dữ liệu trước khi cập nhật
+            ValidateUpdate(request, id);
+            // Map từ Request DTO sang Entity với ID từ parameter
+            var updatedEntity = MapUpdateRequestToEntity(request, id);
+            // Cập nhật vào database
+            updatedEntity = _customerRepository.Update(updatedEntity);
+            // Trả về Response DTO
+            return MapEntityToResponse(updatedEntity);
         }
 
         #endregion

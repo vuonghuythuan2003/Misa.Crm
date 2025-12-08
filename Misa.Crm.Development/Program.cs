@@ -38,7 +38,7 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
+// app.UseMiddleware<ExceptionMiddleware>();
 // Sử dụng Exception Middleware (đặt đầu tiên để bắt tất cả exception)
 app.UseExceptionMiddleware();
 
