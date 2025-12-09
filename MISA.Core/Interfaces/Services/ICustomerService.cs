@@ -40,5 +40,15 @@ namespace MISA.Core.Interfaces.Services
         byte[] ExportToCsv(PagingRequest exportRequest);
 
         #endregion
+
+        #region Gán loại khách hàng hàng loạt
+        /// <summary>
+        /// Gán loại khách hàng cho nhiều bản ghi
+        /// </summary>
+        /// <param name="customerIds">Danh sách ID khách hàng</param>
+        /// <param name="customerType">Loại khách hàng mới</param>
+        /// <returns>Số bản ghi đã cập nhật</returns>
+        int AssignType(List<Guid> customerIds, string customerType);
+        #endregion
     }
 }

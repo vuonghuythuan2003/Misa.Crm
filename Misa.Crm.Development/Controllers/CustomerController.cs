@@ -181,7 +181,25 @@ namespace MISA.Crm.Development.Controllers
 
         #endregion
 
-        #region Xóa hàng loạt
+        #region Gán loại khách hàng hàng loạt
+
+        /// <summary>
+        /// Gán loại khách hàng cho nhiều bản ghi
+        /// </summary>
+        /// <param name="request">Danh sách ID và loại khách hàng mới</param>
+        /// <returns>Số bản ghi đã cập nhật</returns>
+        [HttpPost("assign-type")]
+        public IActionResult AssignCustomerType([FromBody] AssignCustomerTypeRequest request)
+        {
+            if (request == null || request.CustomerIds == null || request.CustomerIds.Count == 0 || string.IsNullOrWhiteSpace(request.CustomerType))
+            {
+                throw new ValidationException("assign-type", "Vui lòng chọn khách hàng và loại cần gán.", true);
+            }
+            int affectedRows = _customerService.AssignType(request.CustomerIds, request.CustomerType);
+            return Ok(ApiResponse<object>.Success(new { updatedCount = affectedRows }));
+        }
+
+        #endregion
 
         /// <summary>
         /// Xóa mềm hàng loạt khách hàng
@@ -201,6 +219,6 @@ namespace MISA.Crm.Development.Controllers
             return Ok(ApiResponse<object>.Success(new { deletedCount = affectedRows }));
         }
 
-        #endregion
+        // ...existing code...
     }
 }

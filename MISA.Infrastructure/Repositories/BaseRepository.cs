@@ -44,11 +44,12 @@ namespace MISA.Infrastructure.Repositories
         /// Khởi tạo BaseRepository với cấu hình kết nối
         /// Tìm đến lớp appsettings.json để lấy chuỗi kết nối
         /// Cây cầu kết nối đến database MySQL
+        /// ?? throw new ArgumentNullException(nameof(config), "Connection string 'StrongConnection' not found")
         /// </summary>
         /// <param name="config">Cấu hình ứng dụng</param>
         public BaseRepository(IConfiguration config)
         {
-            connectionString = config.GetConnectionString("StrongConnection") ?? throw new ArgumentNullException(nameof(config), "Connection string 'StrongConnection' not found");
+            connectionString = config.GetConnectionString("StrongConnection");
             dbConnection = new MySqlConnection(connectionString);
         }
 
@@ -108,11 +109,47 @@ namespace MISA.Infrastructure.Repositories
         {
             string tableName = ToSnakeCase(typeof(T).Name);
             var properties = typeof(T).GetProperties();
-            // lấy 1 phần tử thay thành phàn tử mới.
             string columnNames = string.Join(", ", properties.Select(p => ToSnakeCase(p.Name)));
             string parameterNames = string.Join(", ", properties.Select(p => "@" + p.Name));
             string sqlCommand = $"INSERT INTO {tableName} ({columnNames}) VALUES ({parameterNames})";
-            dbConnection.Execute(sqlCommand, entity);
+            try
+            {
+                dbConnection.Execute(sqlCommand, entity);
+            }
+            catch (MySqlConnector.MySqlException ex)
+            {
+                // Xử lý các trường hợp trùng dữ liệu (cột có thể đổi tên hoặc khác biệt)
+                if (ex.Message.Contains("Duplicate entry"))
+                {
+                    if (ex.Message.Contains("phone") || ex.Message.Contains("customer_phone_number") || ex.Message.Contains("customerphonenumber"))
+                    {
+                        throw new MISA.Core.Exception.ValidationException(
+                            MISA.Core.Exception.ErrorCode.DuplicatePhoneNumber,
+                            "Số điện thoại đã tồn tại trong hệ thống.",
+                            null);
+                    }
+                    if (ex.Message.Contains("email") || ex.Message.Contains("customer_email") || ex.Message.Contains("customeremail"))
+                    {
+                        throw new MISA.Core.Exception.ValidationException(
+                            MISA.Core.Exception.ErrorCode.DuplicateEmail,
+                            "Email đã tồn tại trong hệ thống.",
+                            null);
+                    }
+                    if (ex.Message.Contains("code") || ex.Message.Contains("customer_code") || ex.Message.Contains("customercode"))
+                    {
+                        throw new MISA.Core.Exception.ValidationException(
+                            MISA.Core.Exception.ErrorCode.DuplicateCustomerCode,
+                            "Mã khách hàng đã tồn tại trong hệ thống.",
+                            null);
+                    }
+                    // Nếu không xác định được cột, trả về lỗi trùng dữ liệu chung
+                    throw new MISA.Core.Exception.ValidationException(
+                        MISA.Core.Exception.ErrorCode.DuplicateData,
+                        "Dữ liệu đã tồn tại trong hệ thống.",
+                        null);
+                }
+                throw;
+            }
             return entity;
         }
 
@@ -141,6 +178,7 @@ namespace MISA.Infrastructure.Repositories
 
             string tableName = ToSnakeCase(typeof(T).Name);
             string idColumnName = ToSnakeCase(typeof(T).Name + "Id");
+            // tạo ra các param động cho từng ID trong danh sách
             string placeholders = string.Join(",", entityIds.Select((_, i) => $"@Id{i}"));
             string sqlCommand = $"UPDATE {tableName} SET is_deleted = 1 WHERE {idColumnName} IN ({placeholders})";
             
@@ -164,13 +202,50 @@ namespace MISA.Infrastructure.Repositories
             var properties = typeof(T).GetProperties();
             string idPropertyName = typeof(T).Name + "Id";
             string idColumnName = ToSnakeCase(idPropertyName);
-            
+
             string setClause = string.Join(", ", properties
                 .Where(p => p.Name != idPropertyName)
                 .Select(p => $"{ToSnakeCase(p.Name)} = @{p.Name}"));
-            
+
             string sqlCommand = $"UPDATE {tableName} SET {setClause} WHERE {idColumnName} = @{idPropertyName}";
-            dbConnection.Execute(sqlCommand, entity);
+            try
+            {
+                dbConnection.Execute(sqlCommand, entity);
+            }
+            catch (MySqlConnector.MySqlException ex)
+            {
+                // Xử lý các trường hợp trùng dữ liệu (cột có thể đổi tên hoặc khác biệt)
+                if (ex.Message.Contains("Duplicate entry"))
+                {
+                    if (ex.Message.Contains("phone") || ex.Message.Contains("customer_phone_number") || ex.Message.Contains("customerphonenumber"))
+                    {
+                        throw new MISA.Core.Exception.ValidationException(
+                            MISA.Core.Exception.ErrorCode.DuplicatePhoneNumber,
+                            "Số điện thoại đã tồn tại trong hệ thống.",
+                            null);
+                    }
+                    if (ex.Message.Contains("email") || ex.Message.Contains("customer_email") || ex.Message.Contains("customeremail"))
+                    {
+                        throw new MISA.Core.Exception.ValidationException(
+                            MISA.Core.Exception.ErrorCode.DuplicateEmail,
+                            "Email đã tồn tại trong hệ thống.",
+                            null);
+                    }
+                    if (ex.Message.Contains("code") || ex.Message.Contains("customer_code") || ex.Message.Contains("customercode"))
+                    {
+                        throw new MISA.Core.Exception.ValidationException(
+                            MISA.Core.Exception.ErrorCode.DuplicateCustomerCode,
+                            "Mã khách hàng đã tồn tại trong hệ thống.",
+                            null);
+                    }
+                    // Nếu không xác định được cột, trả về lỗi trùng dữ liệu chung
+                    throw new MISA.Core.Exception.ValidationException(
+                        MISA.Core.Exception.ErrorCode.DuplicateData,
+                        "Dữ liệu đã tồn tại trong hệ thống.",
+                        null);
+                }
+                throw;
+            }
             return entity;
         }
 
@@ -179,20 +254,26 @@ namespace MISA.Infrastructure.Repositories
         /// </summary>
         /// <param name="pagingRequest">Thông tin phân trang và sắp xếp</param>
         /// <returns>Tuple chứa danh sách entity và tổng số bản ghi</returns>
-        public (List<T> Data, int TotalRecords) GetPaging(PagingRequest pagingRequest)
+        public virtual (List<T> Data, int TotalRecords) GetPaging(PagingRequest pagingRequest)
         {
             string tableName = ToSnakeCase(typeof(T).Name);
             
             // Xây dựng điều kiện WHERE
             string whereClause = "WHERE is_deleted = 0";
-            
+
+            // Lọc theo loại khách hàng nếu có
+            var customerTypeProp = typeof(T).GetProperty("CustomerType");
+            if (customerTypeProp != null && !string.IsNullOrWhiteSpace(pagingRequest.CustomerType))
+            {
+                whereClause += " AND customer_type = @CustomerType";
+            }
+
             // Thêm tìm kiếm theo keyword nếu có
             if (!string.IsNullOrWhiteSpace(pagingRequest.Keyword))
             {
                 // Tìm kiếm trên tất cả các cột kiểu string
                 var stringProperties = typeof(T).GetProperties()
                     .Where(p => p.PropertyType == typeof(string));
-                
                 if (stringProperties.Any())
                 {
                     var searchConditions = stringProperties
@@ -208,7 +289,7 @@ namespace MISA.Infrastructure.Repositories
                 // Validate sort column để tránh SQL Injection
                 string sortColumn = ToSnakeCase(pagingRequest.SortColumn);
                 var validColumns = typeof(T).GetProperties().Select(p => ToSnakeCase(p.Name));
-                
+                // Kiểm tra xem cột đó có tồn tại trong bảng hay không
                 if (validColumns.Contains(sortColumn))
                 {
                     string sortDirection = pagingRequest.SortDirection?.ToUpper() == "DESC" ? "DESC" : "ASC";
@@ -238,7 +319,10 @@ namespace MISA.Infrastructure.Repositories
             var parameters = new DynamicParameters();
             parameters.Add("PageSize", pagingRequest.PageSize);
             parameters.Add("Offset", offset);
-            
+            if (!string.IsNullOrWhiteSpace(pagingRequest.CustomerType))
+            {
+                parameters.Add("CustomerType", pagingRequest.CustomerType);
+            }
             if (!string.IsNullOrWhiteSpace(pagingRequest.Keyword))
             {
                 parameters.Add("Keyword", $"%{pagingRequest.Keyword}%");

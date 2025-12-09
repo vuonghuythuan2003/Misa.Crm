@@ -32,6 +32,21 @@ namespace MISA.Core.Services
 
         #endregion
 
+        #region Gán loại khách hàng hàng loạt
+        /// <summary>
+        /// Gán loại khách hàng cho nhiều bản ghi
+        /// </summary>
+        /// <param name="customerIds">Danh sách ID khách hàng</param>
+        /// <param name="customerType">Loại khách hàng mới</param>
+        /// <returns>Số bản ghi đã cập nhật</returns>
+        public int AssignType(List<Guid> customerIds, string customerType)
+        {
+            if (customerIds == null || customerIds.Count == 0 || string.IsNullOrWhiteSpace(customerType))
+                return 0;
+            return _customerRepository.AssignType(customerIds, customerType);
+        }
+        #endregion
+
         #region Constructor
 
         /// <summary>
@@ -91,7 +106,7 @@ namespace MISA.Core.Services
 
             HashSet<string> emailsInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> phonesInFile = new HashSet<string>();
-
+            // Dictionary dùng để ánh xạ (map) tên cột trong header file CSV sang vị trí (index) của cột đó.
             Dictionary<string, int> columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             // Khởi tạo counter sinh mã
@@ -107,10 +122,12 @@ namespace MISA.Core.Services
                     nextSequence = currentSequence + 1;
                 }
             }
-
+            // Khai báo StreamReader để đọc file CSV dữ liệu đầu vào và đọc đúng ký tự UTF-8
             using (StreamReader reader = new StreamReader(csvStream, Encoding.UTF8))
             {
-                string headerLine = reader.ReadLine();
+                // Đọc dòng header để xác định vị trí các cột
+                string headerLine = reader.ReadLine(); 
+                
                 if (string.IsNullOrWhiteSpace(headerLine))
                 {
                     throw new MISA.Core.Exception.ValidationException(
@@ -118,8 +135,9 @@ namespace MISA.Core.Services
                         "File CSV không có dữ liệu hoặc thiếu header.",
                         null);
                 }
-
+                // để tách dòng header thành mảng các tên cột.
                 string[] headers = ParseCsvLine(headerLine);
+                // Duyệt qua mảng tên cột và lưu vào dictionary ánh xạ tên cột - vị trí index cột
                 for (int i = 0; i < headers.Length; i++)
                 {
                     string header = headers[i].Trim();
@@ -128,7 +146,7 @@ namespace MISA.Core.Services
                         columnMapping[header] = i;
                     }
                 }
-
+                // Định nghĩa các tên trường chuẩn (FullName, Phone, Email...) và các tên thay thế có thể xuất hiện trong file CSV.
                 Dictionary<string, string[]> requiredColumnsMap = new Dictionary<string, string[]>
                 {
                     { "FullName", new[] { "FullName", "CustomerName" } },
@@ -140,12 +158,14 @@ namespace MISA.Core.Services
 
                 List<string> missingColumns = new List<string>();
                 Dictionary<string, string> mappedColumns = new Dictionary<string, string>();
-
+                //Lặp qua từng trường bắt buộc
                 foreach (var columnGroup in requiredColumnsMap)
                 {
                     bool found = false;
+                    //Lặp qua các tên thay thế
                     foreach (string altName in columnGroup.Value)
                     {
+                        //Kiểm tra xem tên thay thế có tồn tại trong header file không. Nếu có, lưu tên cột thực tế tìm được vào mappedColumns.
                         if (columnMapping.ContainsKey(altName))
                         {
                             mappedColumns[columnGroup.Key] = altName;
@@ -158,7 +178,7 @@ namespace MISA.Core.Services
                         missingColumns.Add(columnGroup.Key);
                     }
                 }
-
+                // Nếu không tìm thấy đủ các cột bắt buộc, ném ra ngoại lệ và báo cho người dùng biết các cột bị thiếu.
                 if (missingColumns.Count > 0)
                 {
                     throw new MISA.Core.Exception.ValidationException(
@@ -169,9 +189,10 @@ namespace MISA.Core.Services
 
                 int rowNumber = 0;
                 string line;
-
+                // đọc từng dòng còn lại của file CSV
                 while ((line = reader.ReadLine()) != null)
                 {
+                    // Tăng số thứ tự dòng và tổng số dòng được xử lý.
                     rowNumber++;
                     response.TotalRows++;
 
@@ -179,7 +200,7 @@ namespace MISA.Core.Services
                         continue;
 
                     string[] columns = ParseCsvLine(line);
-
+                    // Lấy giá trị từng cột theo ánh xạ đã xác định
                     string fullName = GetColumnValue(columns, columnMapping, mappedColumns["FullName"]);
                     string phone = GetColumnValue(columns, columnMapping, mappedColumns["Phone"]);
                     string email = GetColumnValue(columns, columnMapping, mappedColumns["Email"]);
@@ -188,9 +209,9 @@ namespace MISA.Core.Services
                         ? GetColumnValue(columns, columnMapping, mappedColumns["TaxCode"])
                         : string.Empty;
                     string customerType = GetColumnValue(columns, columnMapping, mappedColumns["CustomerType"]);
-
+                    // Validate dữ liệu từng dòng
                     List<string> errors = ValidateCustomerData(fullName, phone, email, address, taxCode, customerType, phonesInFile, emailsInFile);
-
+                    // Nếu có lỗi, ghi lại chi tiết lỗi vào response.Errors, tăng bộ đếm lỗi và bỏ qua dòng dữ liệu này, chuyển sang dòng tiếp theo (continue)
                     if (errors.Count > 0)
                     {
                         response.Errors.Add(new ImportErrorDetail
@@ -223,7 +244,7 @@ namespace MISA.Core.Services
                     nextSequence++;
                 }
             }
-
+            // Sau khi đọc và validate toàn bộ file, nếu có khách hàng hợp lệ thì thực hiện chèn vào database
             if (validCustomers.Count > 0)
             {
                 response.SuccessCount = _customerRepository.InsertMany(validCustomers);
@@ -272,20 +293,16 @@ namespace MISA.Core.Services
             else
                 emailsInFile.Add(email);
 
-            // Validate Address
-            if (string.IsNullOrWhiteSpace(address))
-                errors.Add("Địa chỉ không được để trống.");
-            else if (address.Length > 255)
+            // Validate Address (optional)
+            if (!string.IsNullOrWhiteSpace(address) && address.Length > 255)
                 errors.Add("Địa chỉ không được vượt quá 255 ký tự.");
 
             // Validate TaxCode (optional)
             if (!string.IsNullOrWhiteSpace(taxCode) && taxCode.Length > 20)
                 errors.Add("Mã số thuế không được vượt quá 20 ký tự.");
 
-            // Validate CustomerType
-            if (string.IsNullOrWhiteSpace(customerType))
-                errors.Add("Loại khách hàng không được để trống.");
-            else if (customerType.Length > 20)
+            // Validate CustomerType (optional)
+            if (!string.IsNullOrWhiteSpace(customerType) && customerType.Length > 20)
                 errors.Add("Loại khách hàng không được vượt quá 20 ký tự.");
 
             return errors;
@@ -300,6 +317,8 @@ namespace MISA.Core.Services
         /// <returns>Giá trị của cột hoặc chuỗi rỗng nếu không tìm thấy</returns>
         private string GetColumnValue(string[] columns, Dictionary<string, int> columnMapping, string columnName)
         {
+            // Kiểm tra xem vị trí tìm được (index) có nhỏ hơn tổng số cột trong dòng dữ liệu hay không.
+            // Kiểm tra xem columnMapping có chứa columnName không và index có hợp lệ không
             if (columnMapping.TryGetValue(columnName, out int index) && index < columns.Length)
             {
                 return columns[index].Trim();
@@ -311,23 +330,30 @@ namespace MISA.Core.Services
         /// Parse một dòng CSV, xử lý cả trường hợp có dấu ngoặc kép
         /// </summary>
         /// <param name="line">Dòng CSV cần parse</param>
+        /// chức năng chính phân biệt và phân tách các cột
         /// <returns>Mảng các giá trị</returns>
         private string[] ParseCsvLine(string line)
         {
+
             List<string> result = new List<string>();
+            // Kiểm tra trạng thái đang trong dấu ngoặc kép hay không
             bool inQuotes = false;
+            // Dùng để tập hợp các ký tự tạo nên giá trị của cột.
             StringBuilder currentValue = new StringBuilder();
 
+            // Vòng lặp duyệt qua từng ký tự c từ đầu đến cuối file CSV
             for (int i = 0; i < line.Length; i++)
             {
+                //Lấy ký tự đang xét trong vòng lặp.
                 char c = line[i];
-
+                // Bắt đầu bằng dấu ngoặc kép
                 if (c == '"')
                 {
                     if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
                     {
-                        // Escaped quote
+                        //Thêm một dấu ngoặc kép vào giá trị cột hiện tại.
                         currentValue.Append('"');
+                        // Tăng i thêm 1 để bỏ qua ký tự ngoặc kép thứ hai của cặp "" (vì nó đã được xử lý).
                         i++;
                     }
                     else
@@ -335,17 +361,21 @@ namespace MISA.Core.Services
                         inQuotes = !inQuotes;
                     }
                 }
+                // Nếu ký tự hiện tại là dấu phẩy (,) VÀ đang không nằm trong ngoặc kép (!inQuotes). Điều này xác nhận dấu phẩy này là ranh giới giữa hai cột.
                 else if (c == ',' && !inQuotes)
                 {
+                    //Kết thúc cột hiện tại. Chuyển nội dung từ currentValue thành string và thêm vào danh sách kết quả (result).
                     result.Add(currentValue.ToString());
+                    //Bắt đầu cột mới. Xóa nội dung của currentValue để chuẩn bị tích lũy các ký tự cho cột tiếp theo.
                     currentValue.Clear();
                 }
                 else
                 {
+                    // Nếu ký tự hiện tại không phải là dấu ngoặc kép và không phải là dấu phẩy phân cách
+                    // (bao gồm các chữ cái, số, ký tự đặc biệt, và cả dấu phẩy nếu đang ở trạng thái inQuotes = true).
                     currentValue.Append(c);
                 }
             }
-
             result.Add(currentValue.ToString());
             return result.ToArray();
         }
@@ -398,6 +428,7 @@ namespace MISA.Core.Services
         /// <summary>
         /// Escape giá trị để đưa vào CSV (xử lý dấu phẩy, dấu ngoặc kép, xuống dòng)
         /// </summary>
+        /// đảm bảo rằng một giá trị dữ liệu cụ thể có thể được ghi vào file CSV mà không làm hỏng cấu trúc cột của file đó.
         /// <param name="value">Giá trị cần escape</param>
         /// <returns>Giá trị đã escape</returns>
         private string EscapeCsvValue(string value)

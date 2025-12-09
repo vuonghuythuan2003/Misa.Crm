@@ -29,6 +29,22 @@ namespace MISA.Infrastructure.Repositories
 
         #endregion
 
+        #region Gán loại khách hàng hàng loạt
+        /// <summary>
+        /// Gán loại khách hàng cho nhiều bản ghi
+        /// </summary>
+        /// <param name="customerIds">Danh sách ID khách hàng</param>
+        /// <param name="customerType">Loại khách hàng mới</param>
+        /// <returns>Số bản ghi đã cập nhật</returns>
+        public int AssignType(List<Guid> customerIds, string customerType)
+        {
+            if (customerIds == null || customerIds.Count == 0 || string.IsNullOrWhiteSpace(customerType))
+                return 0;
+            string sql = "UPDATE customer SET customer_type = @CustomerType WHERE customer_id IN @CustomerIds AND is_deleted = 0";
+            return dbConnection.Execute(sql, new { CustomerType = customerType, CustomerIds = customerIds });
+        }
+        #endregion
+
         #region Kiểm tra trùng lặp
 
         /// <summary>
@@ -170,6 +186,63 @@ namespace MISA.Infrastructure.Repositories
 
         #endregion
 
+        #region Override GetPaging
+
+        /// <summary>
+        /// Override GetPaging để sử dụng BuildWhereClause với các filter đầy đủ
+        /// </summary>
+        /// <param name="pagingRequest">Thông tin phân trang và lọc</param>
+        /// <returns>Tuple chứa danh sách entity và tổng số bản ghi</returns>
+        public override (List<Customer> Data, int TotalRecords) GetPaging(PagingRequest pagingRequest)
+        {
+            DynamicParameters parameters = new DynamicParameters();
+            
+            // Xây dựng WHERE clause từ filter (sử dụng BuildWhereClause)
+            string whereClause = BuildWhereClause(pagingRequest, parameters);
+            
+            // Xây dựng ORDER BY clause
+            string orderByClause = "";
+            if (!string.IsNullOrWhiteSpace(pagingRequest.SortColumn))
+            {
+                string sortColumn = ToSnakeCase(pagingRequest.SortColumn);
+                var validColumns = typeof(Customer).GetProperties().Select(p => ToSnakeCase(p.Name));
+                
+                if (validColumns.Contains(sortColumn))
+                {
+                    string sortDirection = pagingRequest.SortDirection?.ToUpper() == "DESC" ? "DESC" : "ASC";
+                    orderByClause = $"ORDER BY {sortColumn} {sortDirection}";
+                }
+            }
+            
+            // Nếu không có order by, sắp xếp theo ID mặc định
+            if (string.IsNullOrEmpty(orderByClause))
+            {
+                orderByClause = "ORDER BY customer_id DESC";
+            }
+            
+            // Tính offset
+            int offset = (pagingRequest.PageNumber - 1) * pagingRequest.PageSize;
+            
+            // Query lấy dữ liệu phân trang
+            string sqlData = $@"SELECT * FROM customer 
+                               {whereClause} 
+                               {orderByClause} 
+                               LIMIT @PageSize OFFSET @Offset";
+            
+            // Query đếm tổng số bản ghi
+            string sqlCount = $"SELECT COUNT(*) FROM customer {whereClause}";
+            
+            parameters.Add("PageSize", pagingRequest.PageSize);
+            parameters.Add("Offset", offset);
+            
+            List<Customer> data = dbConnection.Query<Customer>(sqlData, parameters).ToList();
+            int totalRecords = dbConnection.ExecuteScalar<int>(sqlCount, parameters);
+            
+            return (data, totalRecords);
+        }
+
+        #endregion
+
         #region Private Method - Build Clause
 
         /// <summary>
@@ -201,6 +274,13 @@ namespace MISA.Infrastructure.Repositories
             {
                 whereClause.Append(" AND " + ToSnakeCase(nameof(Customer.CustomerPhoneNumber)) + " LIKE @CustomerPhoneNumber");
                 parameters.Add("CustomerPhoneNumber", $"%{filterRequest.CustomerPhoneNumber}%");
+            }
+
+            // Lọc theo loại khách hàng
+            if (!string.IsNullOrWhiteSpace(filterRequest.CustomerType))
+            {
+                whereClause.Append(" AND " + ToSnakeCase(nameof(Customer.CustomerType)) + " = @CustomerType");
+                parameters.Add("CustomerType", filterRequest.CustomerType);
             }
 
             // Lọc theo keyword chung (tìm trên nhiều trường)

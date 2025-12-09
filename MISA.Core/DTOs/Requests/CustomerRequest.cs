@@ -22,9 +22,8 @@ namespace MISA.Core.DTOs.Requests
         /// <summary>
         /// Loại khách hàng
         /// </summary>
-        [Required(ErrorMessage = "Loại khách hàng không được để trống")]
         [MaxLength(20, ErrorMessage = "Loại khách hàng không được vượt quá 20 ký tự")]
-        public string CustomerType { get; set; }
+        public string? CustomerType { get; set; }
 
         /// <summary>
         /// Mã khách hàng (Unique)
@@ -58,9 +57,8 @@ namespace MISA.Core.DTOs.Requests
         /// <summary>
         /// Địa chỉ giao hàng
         /// </summary>
-        [Required(ErrorMessage = "Địa chỉ giao hàng không được để trống")]
         [MaxLength(255, ErrorMessage = "Địa chỉ giao hàng không được vượt quá 255 ký tự")]
-        public string CustomerShippingAddress { get; set; }
+        public string? CustomerShippingAddress { get; set; }
 
         /// <summary>
         /// Mã số thuế (không bắt buộc)
