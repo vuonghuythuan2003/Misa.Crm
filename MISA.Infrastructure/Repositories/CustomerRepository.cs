@@ -108,7 +108,6 @@ namespace MISA.Infrastructure.Repositories
                                   WHERE customer_code LIKE @Prefix 
                                   ORDER BY CAST(SUBSTRING(customer_code, @PrefixLength + 1) AS UNSIGNED) DESC 
                                   LIMIT 1";
-            
             return dbConnection.QueryFirstOrDefault<string?>(sqlCommand, new { Prefix = prefix + "%", PrefixLength = prefix.Length });
         }
 

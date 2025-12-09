@@ -112,44 +112,7 @@ namespace MISA.Infrastructure.Repositories
             string columnNames = string.Join(", ", properties.Select(p => ToSnakeCase(p.Name)));
             string parameterNames = string.Join(", ", properties.Select(p => "@" + p.Name));
             string sqlCommand = $"INSERT INTO {tableName} ({columnNames}) VALUES ({parameterNames})";
-            try
-            {
                 dbConnection.Execute(sqlCommand, entity);
-            }
-            catch (MySqlConnector.MySqlException ex)
-            {
-                // Xử lý các trường hợp trùng dữ liệu (cột có thể đổi tên hoặc khác biệt)
-                if (ex.Message.Contains("Duplicate entry"))
-                {
-                    if (ex.Message.Contains("phone") || ex.Message.Contains("customer_phone_number") || ex.Message.Contains("customerphonenumber"))
-                    {
-                        throw new MISA.Core.Exception.ValidationException(
-                            MISA.Core.Exception.ErrorCode.DuplicatePhoneNumber,
-                            "Số điện thoại đã tồn tại trong hệ thống.",
-                            null);
-                    }
-                    if (ex.Message.Contains("email") || ex.Message.Contains("customer_email") || ex.Message.Contains("customeremail"))
-                    {
-                        throw new MISA.Core.Exception.ValidationException(
-                            MISA.Core.Exception.ErrorCode.DuplicateEmail,
-                            "Email đã tồn tại trong hệ thống.",
-                            null);
-                    }
-                    if (ex.Message.Contains("code") || ex.Message.Contains("customer_code") || ex.Message.Contains("customercode"))
-                    {
-                        throw new MISA.Core.Exception.ValidationException(
-                            MISA.Core.Exception.ErrorCode.DuplicateCustomerCode,
-                            "Mã khách hàng đã tồn tại trong hệ thống.",
-                            null);
-                    }
-                    // Nếu không xác định được cột, trả về lỗi trùng dữ liệu chung
-                    throw new MISA.Core.Exception.ValidationException(
-                        MISA.Core.Exception.ErrorCode.DuplicateData,
-                        "Dữ liệu đã tồn tại trong hệ thống.",
-                        null);
-                }
-                throw;
-            }
             return entity;
         }
 
@@ -208,44 +171,7 @@ namespace MISA.Infrastructure.Repositories
                 .Select(p => $"{ToSnakeCase(p.Name)} = @{p.Name}"));
 
             string sqlCommand = $"UPDATE {tableName} SET {setClause} WHERE {idColumnName} = @{idPropertyName}";
-            try
-            {
                 dbConnection.Execute(sqlCommand, entity);
-            }
-            catch (MySqlConnector.MySqlException ex)
-            {
-                // Xử lý các trường hợp trùng dữ liệu (cột có thể đổi tên hoặc khác biệt)
-                if (ex.Message.Contains("Duplicate entry"))
-                {
-                    if (ex.Message.Contains("phone") || ex.Message.Contains("customer_phone_number") || ex.Message.Contains("customerphonenumber"))
-                    {
-                        throw new MISA.Core.Exception.ValidationException(
-                            MISA.Core.Exception.ErrorCode.DuplicatePhoneNumber,
-                            "Số điện thoại đã tồn tại trong hệ thống.",
-                            null);
-                    }
-                    if (ex.Message.Contains("email") || ex.Message.Contains("customer_email") || ex.Message.Contains("customeremail"))
-                    {
-                        throw new MISA.Core.Exception.ValidationException(
-                            MISA.Core.Exception.ErrorCode.DuplicateEmail,
-                            "Email đã tồn tại trong hệ thống.",
-                            null);
-                    }
-                    if (ex.Message.Contains("code") || ex.Message.Contains("customer_code") || ex.Message.Contains("customercode"))
-                    {
-                        throw new MISA.Core.Exception.ValidationException(
-                            MISA.Core.Exception.ErrorCode.DuplicateCustomerCode,
-                            "Mã khách hàng đã tồn tại trong hệ thống.",
-                            null);
-                    }
-                    // Nếu không xác định được cột, trả về lỗi trùng dữ liệu chung
-                    throw new MISA.Core.Exception.ValidationException(
-                        MISA.Core.Exception.ErrorCode.DuplicateData,
-                        "Dữ liệu đã tồn tại trong hệ thống.",
-                        null);
-                }
-                throw;
-            }
             return entity;
         }
 

@@ -32,21 +32,6 @@ namespace MISA.Core.Services
 
         #endregion
 
-        #region Gán loại khách hàng hàng loạt
-        /// <summary>
-        /// Gán loại khách hàng cho nhiều bản ghi
-        /// </summary>
-        /// <param name="customerIds">Danh sách ID khách hàng</param>
-        /// <param name="customerType">Loại khách hàng mới</param>
-        /// <returns>Số bản ghi đã cập nhật</returns>
-        public int AssignType(List<Guid> customerIds, string customerType)
-        {
-            if (customerIds == null || customerIds.Count == 0 || string.IsNullOrWhiteSpace(customerType))
-                return 0;
-            return _customerRepository.AssignType(customerIds, customerType);
-        }
-        #endregion
-
         #region Constructor
 
         /// <summary>
@@ -60,6 +45,21 @@ namespace MISA.Core.Services
             _cloudinaryService = cloudinaryService;
         }
 
+        #endregion
+
+        #region Gán loại khách hàng hàng loạt
+        /// <summary>
+        /// Gán loại khách hàng cho nhiều bản ghi
+        /// </summary>
+        /// <param name="customerIds">Danh sách ID khách hàng</param>
+        /// <param name="customerType">Loại khách hàng mới</param>
+        /// <returns>Số bản ghi đã cập nhật</returns>
+        public int AssignType(List<Guid> customerIds, string customerType)
+        {
+            if (customerIds == null || customerIds.Count == 0 || string.IsNullOrWhiteSpace(customerType))
+                return 0;
+            return _customerRepository.AssignType(customerIds, customerType);
+        }
         #endregion
 
         #region Sinh mã khách hàng

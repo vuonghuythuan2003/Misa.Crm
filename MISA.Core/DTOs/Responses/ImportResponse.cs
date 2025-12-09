@@ -30,6 +30,11 @@ namespace MISA.Core.DTOs.Responses
         public int ErrorCount { get; set; }
 
         /// <summary>
+        /// Số dòng bị lỗi (alias cho ErrorCount để frontend đọc dễ hơn)
+        /// </summary>
+        public int FailCount => ErrorCount;
+
+        /// <summary>
         /// Danh sách chi tiết các dòng bị lỗi, cung cấp thông tin cụ thể về từng lỗi.
         /// </summary>
         public List<ImportErrorDetail> Errors { get; set; } = new List<ImportErrorDetail>();
